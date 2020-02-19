@@ -23,6 +23,8 @@
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_parameter_and_return.PNG?raw=true)
 #### c. 函数中语句的分类统计
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_features.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_feature14.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_feature15.PNG?raw=true)
 #### d. 函数中局部变量的使用情况
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_all_local_variables.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_local_variable_usage.PNG?raw=true)
