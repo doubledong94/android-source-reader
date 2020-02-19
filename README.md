@@ -13,7 +13,7 @@
 #### b. 类中的属性和方法
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_fields.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_methods.PNG?raw=true)
-#### c. 类的产生的实例（包括局部变量）
+#### c. 类所产生的实例（包括局部变量）
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_instance_for_field.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_instance_for_local_variable.PNG?raw=true)
 ### 2. 查看函数
