@@ -9,16 +9,33 @@
 ## 这个工具如何帮你读安卓代码
 ### 1. 查看类
 #### a. 类的父类和子类
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_super_and_sub_types.PNG?raw=true)
 #### b. 类中的属性和方法
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_fields.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_methods.PNG?raw=true)
 #### c. 类的产生的实例（包括局部变量）
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_instance_for_field.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_instance_for_local_variable.PNG?raw=true)
 ### 2. 查看函数
 #### a. 函数的源码
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_src.PNG?raw=true)
 #### b. 函数的参数与返回
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_parameter_and_return.PNG?raw=true)
 #### c. 函数中语句的分类统计
-#### d. 函数中局部变量的使用
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_features.PNG?raw=true)
+#### d. 函数中局部变量的使用情况
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_all_local_variables.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_local_variable_usage.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_local_variable_src.PNG?raw=true)
 #### e. 函数所产生的属性的读写（局部变量的过渡作用已考虑在内）
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_field_read_and_write.PNG?raw=true)
 ### 3. 查看属性
 #### a. 属性的类型
 #### b. 属性的源码
 #### c. 属性被读写的统计情况
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/field_src_and_features.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/field_feature.PNG?raw=true)
 #### d. 属性被读写的具体情况
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/field_is_read_by.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/field_is_written_by.PNG?raw=true)
+
