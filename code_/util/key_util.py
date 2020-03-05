@@ -6,6 +6,10 @@ fieldkey2fieldTypekey = pickle.load(open(fieldkey2fieldTypekey_path, 'rb'))
 LVKey2LVTypeKey = pickle.load(open(LVKey2LVTypeKey_path, 'rb'))
 
 
+def is_lv_key_or_index(key):
+    return key in LVKey2LVTypeKey or key.endswith("-Index")
+
+
 def is_lv_key(key):
     return key in LVKey2LVTypeKey
 
@@ -37,5 +41,31 @@ def is_local_key(key):
     return key.endswith(":Local")
 
 
+def is_method_reference_key(key):
+    return key.endswith(':Reference')
+
+
+def is_field_reference_key(key):
+    return key.endswith('-Reference')
+
+
 def get_feature_key(key, i):
     return key + "Feature" + str(i)
+
+
+def get_method_key_from_parameter_key(parameter_key):
+    mk = parameter_key[0:-10]
+    if not mk.endswith(':'):
+        mk = mk[0:-1]
+    return mk
+
+
+def get_method_key_from_return_key(return_key):
+    return return_key[0:-6]
+
+
+def get_key_from_reference(reference_key):
+    k = reference_key[0:-9]
+    if not k.endswith(':'):
+        k = k[0:-1]
+    return k

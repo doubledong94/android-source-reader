@@ -17,6 +17,7 @@ typekey2methodkey_json_path = json_folder + 'typekey2methodkey.json'
 typeKey2package_json_path = json_folder + 'typeKey2package.json'
 methodKey2srcLoc_json_path = json_folder + 'methodKey2src.json'
 fieldKey2srcLoc_json_path = json_folder + 'fieldKey2src.json'
+
 data_abs_dir = current_dir + '/data_/'
 txt_abs_dir = current_dir + '/txt_/'
 src_abs_dir = current_dir + '/androidSrc/'
@@ -51,6 +52,15 @@ fieldKey2fieldFeature_file_path = data_abs_dir + 'fieldKey2fieldFeature.pkl'
 fieldKey2fieldFeatureRelationList_file_path = data_abs_dir + 'fieldKey2fieldFeatureRelationList.pkl'
 feature_key2methodKeys_file_path = data_abs_dir + 'feature_key2methodKeys.pkl'
 feature_key2fieldKeys_file_path = data_abs_dir + 'feature_key2fieldKeys.pkl'
+
+method2lv_dependency_in_dir_file_path = data_abs_dir + 'method2lv_dependency_in_dir.pkl'
+method2lv_dependency_out_dir_file_path = data_abs_dir + 'method2lv_dependency_out_dir.pkl'
+
+class2field_dependency_in_dir_file_path = data_abs_dir + 'class2field_dependency_in_dir.pkl'
+class2field_dependency_out_dir_file_path = data_abs_dir + 'class2field_dependency_out_dir.pkl'
+
+class2method_dependency_in_dir_file_path = data_abs_dir + 'class2method_dependency_in_dir.pkl'
+class2method_dependency_out_dir_file_path = data_abs_dir + 'class2method_dependency_out_dir.pkl'
 
 
 def get_lines(file_path, start_line, end_line):

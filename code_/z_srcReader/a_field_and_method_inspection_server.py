@@ -10,8 +10,11 @@ from code_.util.file_util import writen_file_path, read_file_path, \
     typekey2methodkey_path, superTypes_path, subTypes_path, fieldKey2typeKey_path, methodKey2typeKey_path, \
     type2instance_for_field_file_path, type2instance_for_local_file_path, methodKey2srcLoc_path, get_lines, src_abs_dir, \
     fieldKey2srcLoc_path, interfaceType_path, methodKey2methodFeature_file_path, fieldKey2fieldFeature_file_path, \
-    methodKey2methodFeatureRelationList_file_path, fieldKey2fieldFeatureRelationList_file_path
-from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key
+    methodKey2methodFeatureRelationList_file_path, fieldKey2fieldFeatureRelationList_file_path, \
+    method2lv_dependency_in_dir_file_path, method2lv_dependency_out_dir_file_path, \
+    class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
+    class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path
+from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key, get_method_key_from_parameter_key
 
 host = ""
 
@@ -55,10 +58,54 @@ def get_all_local_variable_html(relation_list):
         html_str += "<br><br>"
     return html_str
 
+dependency_colors=['#f5b7b1','#d2b4de','#a9cce3','#abebc6','#f9e79f','#f5cba7','#d5dbdb']*10
+
+def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list):
+    # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
+    html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_colored_text_html(lv, dependency_colors[depth]) + "<br>"
+    if lv not in super_list:
+        super_list.append(lv)
+        if lv in lv_dependency_in_dir:
+            for child_node in lv_dependency_in_dir[lv]:
+                super_list_copy = super_list.copy()
+                html_str += recur_for_dependency(child_node, lv_dependency_in_dir, depth + 1, super_list_copy)
+    return html_str
+
+
+def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str):
+    all_lv_key = []
+    for k, v in lv_dependency_out_dir.items():
+        all_lv_key.append(k)
+        for vi in v:
+            all_lv_key.append(vi)
+    all_lv_key = list(set(all_lv_key))
+    out_zero_lv_list = []
+    in_zero_lv_list = []
+    for lv_key in all_lv_key:
+        if lv_key not in lv_dependency_out_dir.keys() or len(lv_dependency_out_dir[lv_key]) == 0:
+            out_zero_lv_list.append(lv_key)
+        elif lv_key in lv_dependency_out_dir[lv_key] and len(lv_dependency_out_dir[lv_key]) == 1:
+            out_zero_lv_list.append(lv_key)
+    for lv_key in all_lv_key:
+        if lv_key not in lv_dependency_in_dir.keys() or len(lv_dependency_in_dir[lv_key]) == 0:
+            in_zero_lv_list.append(lv_key)
+        elif lv_key in lv_dependency_in_dir[lv_key] and len(lv_dependency_in_dir[lv_key]) == 1:
+            in_zero_lv_list.append(lv_key)
+    html_str = '<h1>' + id_str + ' dependency in:</h1>'
+    for lv in out_zero_lv_list:
+        html_str += recur_for_dependency(lv, lv_dependency_in_dir, 0, [])
+        html_str += '<br>'
+    html_str += '<h1>' + id_str + ' dependency out:</h1>'
+    for lv in in_zero_lv_list:
+        html_str += recur_for_dependency(lv, lv_dependency_out_dir, 0, [])
+        html_str += '<br>'
+    return html_str
+
 
 def get_relation_with_local_html(relation_list):
     html_str = "<h1>relations with local:</h1>"
     for r in relation_list:
+        html_str += "s" + str(r[3]) + ": "
         html_str += '<a href="http://' + host + ':8888/' + r[0] + '">' + r[0] + "</a>" + " <--- " + \
                     '<a href="http://' + host + ':8888/' + r[1] + '">' + r[1] + "</a>"
         html_str += ' (' + r[2] + ')'
@@ -69,7 +116,8 @@ def get_relation_with_local_html(relation_list):
 def get_relation_without_local_html(relation_list):
     html_str = "<h1>relations without local:</h1>"
     for r in relation_list:
-        html_str += '<a href="http://' + host + ':8888/' + r[0] + '">' + r[0] + "</a>" + " <--- " + \
+        html_str += 's' + str(r[2]) + ": " + \
+                    '<a href="http://' + host + ':8888/' + r[0] + '">' + r[0] + "</a>" + " <--- " + \
                     '<a href="http://' + host + ':8888/' + r[1] + '">' + r[1] + "</a>"
         html_str += "<br><br>"
     return html_str
@@ -77,6 +125,10 @@ def get_relation_without_local_html(relation_list):
 
 def make_link_html(text, link):
     return '<a href="http://' + host + ':8888/' + link + '">' + text + "</a>"
+
+
+def make_colored_text_html(text, color):
+    return '<text style="background-color:' + color + '">' + text + '</text>'
 
 
 def get_method_feature_html(methodKey, features):
@@ -172,6 +224,14 @@ if __name__ == "__main__":
         pickle.load(open(methodKey2methodFeatureRelationList_file_path, 'rb'))
     fieldKey2fieldFeatureRelationList = \
         pickle.load(open(fieldKey2fieldFeatureRelationList_file_path, 'rb'))
+    method2lv_dependency_in_dir = pickle.load(open(method2lv_dependency_in_dir_file_path, 'rb'))
+    method2lv_dependency_out_dir = pickle.load(open(method2lv_dependency_out_dir_file_path, 'rb'))
+
+    class2field_dependency_in_dir = pickle.load(open(class2field_dependency_in_dir_file_path, 'rb'))
+    class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))
+
+    class2method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
+    class2method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -211,6 +271,10 @@ if __name__ == "__main__":
             if request_str in method2relations:
                 relation_list = method2relations[request_str]
                 http_response += get_all_local_variable_html(relation_list)
+                http_response += get_dependency_html(
+                    method2lv_dependency_in_dir[request_str],
+                    method2lv_dependency_out_dir[request_str],
+                    'local variable')
                 http_response += get_relation_with_local_html(relation_list)
             if request_str in method2relations:
                 relation_list = method2global_relations[request_str]
@@ -222,6 +286,7 @@ if __name__ == "__main__":
             http_response += 'type: <a href="http://' + host + ':8888/' + lvType + '">' + lvType + "</a>"
             http_response += "<br><br>"
             relation_list = LV2relations[request_str]
+            relation_list.sort(key=lambda e: e[3])
             for r in relation_list:
                 r0 = r[0]
                 r1 = r[1]
@@ -229,6 +294,7 @@ if __name__ == "__main__":
                     r0 = make_link_html(r0, r0)
                 if not r1 == request_str:
                     r1 = make_link_html(r1, r1)
+                http_response += 's' + str(r[3]) + ": "
                 http_response += r0 + " <--- " + r1
                 http_response += ' (' + r[2] + ')'
                 http_response += "<br><br>"
@@ -270,12 +336,22 @@ if __name__ == "__main__":
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
+            if request_str in class2field_dependency_in_dir:
+                http_response += get_dependency_html(
+                    class2field_dependency_in_dir[request_str],
+                    class2field_dependency_out_dir[request_str],
+                    'field')
             if request_str in typekey2methodkey:  # 类的方法
                 http_response += "<h1>" + "methods" + "</h1>"
                 field_keys = typekey2methodkey[request_str]
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
+            if request_str in class2method_dependency_in_dir:
+                http_response += get_dependency_html(
+                    class2method_dependency_in_dir[request_str],
+                    class2method_dependency_out_dir[request_str],
+                    'method')
             if request_str in fieldkey2fieldTypekey:  # 属性
                 fieldType = fieldkey2fieldTypekey[request_str]
                 http_response += 'type: <a href="http://' + host + ':8888/' + fieldType + '">' + fieldType + "</a><br><br>"
@@ -284,9 +360,7 @@ if __name__ == "__main__":
                     http_response += 'in type: <a href="http://' + host + ':8888/' + in_type + '">' + in_type + "</a>"
                     http_response += "<br>"
                 if is_parameter_key(request_str):
-                    mk = request_str[0:-10]
-                    if not mk.endswith(':'):
-                        mk = mk[0:-1]
+                    mk = get_method_key_from_parameter_key(request_str)
                     http_response += 'in method: <a href="http://' + host + ':8888/' + mk + '">' + mk + "</a>"
                     http_response += "<br>"
                 if is_return_key(request_str):
