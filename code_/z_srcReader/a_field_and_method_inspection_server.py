@@ -60,19 +60,19 @@ def get_all_local_variable_html(relation_list):
 
 dependency_colors=['#f5b7b1','#d2b4de','#a9cce3','#abebc6','#f9e79f','#f5cba7','#d5dbdb']*10
 
-def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list):
+def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list,type_key_len):
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
-    html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_colored_text_html(lv, dependency_colors[depth]) + "<br>"
+    html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + "<br>"
     if lv not in super_list:
         super_list.append(lv)
         if lv in lv_dependency_in_dir:
             for child_node in lv_dependency_in_dir[lv]:
                 super_list_copy = super_list.copy()
-                html_str += recur_for_dependency(child_node, lv_dependency_in_dir, depth + 1, super_list_copy)
+                html_str += recur_for_dependency(child_node, lv_dependency_in_dir, depth + 1, super_list_copy,type_key_len)
     return html_str
 
 
-def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str):
+def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str,type_key_len):
     all_lv_key = []
     for k, v in lv_dependency_out_dir.items():
         all_lv_key.append(k)
@@ -93,11 +93,11 @@ def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str):
             in_zero_lv_list.append(lv_key)
     html_str = '<h1>' + id_str + ' dependency in:</h1>'
     for lv in out_zero_lv_list:
-        html_str += recur_for_dependency(lv, lv_dependency_in_dir, 0, [])
+        html_str += recur_for_dependency(lv, lv_dependency_in_dir, 0, [],type_key_len)
         html_str += '<br>'
     html_str += '<h1>' + id_str + ' dependency out:</h1>'
     for lv in in_zero_lv_list:
-        html_str += recur_for_dependency(lv, lv_dependency_out_dir, 0, [])
+        html_str += recur_for_dependency(lv, lv_dependency_out_dir, 0, [],type_key_len)
         html_str += '<br>'
     return html_str
 
@@ -274,7 +274,7 @@ if __name__ == "__main__":
                 http_response += get_dependency_html(
                     method2lv_dependency_in_dir[request_str],
                     method2lv_dependency_out_dir[request_str],
-                    'local variable')
+                    'local variable',len(request_str))
                 http_response += get_relation_with_local_html(relation_list)
             if request_str in method2relations:
                 relation_list = method2global_relations[request_str]
@@ -340,7 +340,7 @@ if __name__ == "__main__":
                 http_response += get_dependency_html(
                     class2field_dependency_in_dir[request_str],
                     class2field_dependency_out_dir[request_str],
-                    'field')
+                    'field',len(request_str))
             if request_str in typekey2methodkey:  # 类的方法
                 http_response += "<h1>" + "methods" + "</h1>"
                 field_keys = typekey2methodkey[request_str]
@@ -351,7 +351,7 @@ if __name__ == "__main__":
                 http_response += get_dependency_html(
                     class2method_dependency_in_dir[request_str],
                     class2method_dependency_out_dir[request_str],
-                    'method')
+                    'method',len(request_str))
             if request_str in fieldkey2fieldTypekey:  # 属性
                 fieldType = fieldkey2fieldTypekey[request_str]
                 http_response += 'type: <a href="http://' + host + ':8888/' + fieldType + '">' + fieldType + "</a><br><br>"
