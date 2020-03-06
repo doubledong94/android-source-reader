@@ -13,7 +13,10 @@
 #### b. 类中的属性和方法
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_fields.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_methods.PNG?raw=true)
-#### c. 类所产生的实例（包括局部变量）
+#### c. 类内属性与方法的依赖关系
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/field_dependency.PNG?raw=true)
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_dependency.PNG?raw=true)
+#### d. 类所产生的实例（包括局部变量）
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_instance_for_field.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/class_instance_for_local_variable.PNG?raw=true)
 ### 2. 查看函数
@@ -29,7 +32,9 @@
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_all_local_variables.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_local_variable_usage.PNG?raw=true)
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_local_variable_src.PNG?raw=true)
-#### e. 函数所产生的属性的读写（局部变量的过渡作用已考虑在内）
+#### e. 函数内局部变量的依赖情况
+![](https://github.com/doubledong94/android-source-reader/blob/master/pics/local_variable_dependency.PNG?raw=true)
+#### f. 函数所产生的属性的读写（局部变量的过渡作用已考虑在内）
 ![](https://github.com/doubledong94/android-source-reader/blob/master/pics/method_field_read_and_write.PNG?raw=true)
 ### 3. 查看属性
 #### a. 属性的类型
