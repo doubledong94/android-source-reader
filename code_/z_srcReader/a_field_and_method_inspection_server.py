@@ -3,18 +3,20 @@
 import pickle
 import socket
 
-from code_.util.file_util import writen_file_path, read_file_path, \
-    method2relations_file_path, method2global_relations_file_path, \
+from code_.util.file_util import \
     LV2relations_file_path, LVKey2LVTypeKey_path, \
     fieldkey2fieldTypekey_path, typekey2fieldkey_path, \
     typekey2methodkey_path, superTypes_path, subTypes_path, fieldKey2typeKey_path, methodKey2typeKey_path, \
     type2instance_for_field_file_path, type2instance_for_local_file_path, methodKey2srcLoc_path, get_lines, src_abs_dir, \
     fieldKey2srcLoc_path, interfaceType_path, methodKey2methodFeature_file_path, fieldKey2fieldFeature_file_path, \
-    methodKey2methodFeatureRelationList_file_path, fieldKey2fieldFeatureRelationList_file_path, \
     method2lv_dependency_in_dir_file_path, method2lv_dependency_out_dir_file_path, \
     class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
-    class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path
+    class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path, read_relation_compressed_path, \
+    written_relation_compressed_path, method2relations_compressed_path, method2global_relations_compressed_path, \
+    methodKey2methodFeatureRelationList_compressed_path, fieldKey2fieldFeatureRelationList_compressed_path
 from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key, get_method_key_from_parameter_key
+from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
+    to_longer_key
 
 host = ""
 
@@ -47,10 +49,12 @@ def get_all_local_variable_html(relation_list):
     html_str = "<h1>all local variables:</h1>"
     local_variables = []
     for r in relation_list:
-        if r[0] in LVKey2LVTypeKey:
-            local_variables.append(r[0])
-        if r[1] in LVKey2LVTypeKey:
-            local_variables.append(r[1])
+        r0long = to_longer_key(r[0])
+        if r0long in LVKey2LVTypeKey:
+            local_variables.append(r0long)
+        r1long = to_longer_key(r[1])
+        if r1long in LVKey2LVTypeKey:
+            local_variables.append(r1long)
         local_variables = list(set(local_variables))
         local_variables.sort()
     for lv in local_variables:
@@ -58,21 +62,42 @@ def get_all_local_variable_html(relation_list):
         html_str += "<br><br>"
     return html_str
 
-dependency_colors=['#f5b7b1','#d2b4de','#a9cce3','#abebc6','#f9e79f','#f5cba7','#d5dbdb']*10
 
-def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list,type_key_len):
+dependency_colors = ['#f5b7b1', '#d2b4de', '#a9cce3', '#abebc6', '#f9e79f', '#f5cba7', '#d5dbdb'] * 10
+
+all_dependency_id_list = []
+
+
+def make_colored_text_html(text, color):
+    return '<text style="background-color:' + color + '">' + text + '</text>'
+
+
+def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list):
+    global all_dependency_id_list
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
-    html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + "<br>"
+    padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
+    id = ':'.join(id_list)
+    all_dependency_id_list.append(id)
+    display_str=''
+    if len(super_list)>0:
+        display_str='style="display:none"'
+    html_str = '<text '+display_str+' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' + padding + \
+               make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + "<br></text>"
+    id_count = 0
     if lv not in super_list:
         super_list.append(lv)
         if lv in lv_dependency_in_dir:
             for child_node in lv_dependency_in_dir[lv]:
+                id_count += 1
+                id_list_copy = id_list.copy()
+                id_list_copy.append(str(id_count))
                 super_list_copy = super_list.copy()
-                html_str += recur_for_dependency(child_node, lv_dependency_in_dir, depth + 1, super_list_copy,type_key_len)
+                html_str += recur_for_dependency(
+                    child_node, lv_dependency_in_dir, depth + 1, super_list_copy, type_key_len, id_list_copy)
     return html_str
 
 
-def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str,type_key_len):
+def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str, type_key_len, id_start):
     all_lv_key = []
     for k, v in lv_dependency_out_dir.items():
         all_lv_key.append(k)
@@ -92,12 +117,17 @@ def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str,type
         elif lv_key in lv_dependency_in_dir[lv_key] and len(lv_dependency_in_dir[lv_key]) == 1:
             in_zero_lv_list.append(lv_key)
     html_str = '<h1>' + id_str + ' dependency in:</h1>'
+    id_count = 0
     for lv in out_zero_lv_list:
-        html_str += recur_for_dependency(lv, lv_dependency_in_dir, 0, [],type_key_len)
+        id_count += 1
+        html_str += recur_for_dependency(lv, lv_dependency_in_dir, 0, [],
+                                         type_key_len, [id_start + str(id_count)])
         html_str += '<br>'
     html_str += '<h1>' + id_str + ' dependency out:</h1>'
     for lv in in_zero_lv_list:
-        html_str += recur_for_dependency(lv, lv_dependency_out_dir, 0, [],type_key_len)
+        id_count += 1
+        html_str += recur_for_dependency(lv, lv_dependency_out_dir, 0, [],
+                                         type_key_len, [id_start + str(id_count)])
         html_str += '<br>'
     return html_str
 
@@ -106,8 +136,10 @@ def get_relation_with_local_html(relation_list):
     html_str = "<h1>relations with local:</h1>"
     for r in relation_list:
         html_str += "s" + str(r[3]) + ": "
-        html_str += '<a href="http://' + host + ':8888/' + r[0] + '">' + r[0] + "</a>" + " <--- " + \
-                    '<a href="http://' + host + ':8888/' + r[1] + '">' + r[1] + "</a>"
+        r0long = to_longer_key(r[0])
+        r1long = to_longer_key(r[1])
+        html_str += '<a href="http://' + host + ':8888/' + r0long + '">' + r0long + "</a>" + " <--- " + \
+                    '<a href="http://' + host + ':8888/' + r1long + '">' + r1long + "</a>"
         html_str += ' (' + r[2] + ')'
         html_str += "<br><br>"
     return html_str
@@ -116,19 +148,17 @@ def get_relation_with_local_html(relation_list):
 def get_relation_without_local_html(relation_list):
     html_str = "<h1>relations without local:</h1>"
     for r in relation_list:
+        r0long = to_longer_key(r[0])
+        r1long = to_longer_key(r[1])
         html_str += 's' + str(r[2]) + ": " + \
-                    '<a href="http://' + host + ':8888/' + r[0] + '">' + r[0] + "</a>" + " <--- " + \
-                    '<a href="http://' + host + ':8888/' + r[1] + '">' + r[1] + "</a>"
+                    '<a href="http://' + host + ':8888/' + r0long + '">' + r0long + "</a>" + " <--- " + \
+                    '<a href="http://' + host + ':8888/' + r1long + '">' + r1long + "</a>"
         html_str += "<br><br>"
     return html_str
 
 
 def make_link_html(text, link):
     return '<a href="http://' + host + ':8888/' + link + '">' + text + "</a>"
-
-
-def make_colored_text_html(text, color):
-    return '<text style="background-color:' + color + '">' + text + '</text>'
 
 
 def get_method_feature_html(methodKey, features):
@@ -198,12 +228,56 @@ def get_field_feature_html(fieldKey, features):
     return html_str
 
 
+def convert_python_list2js_list(var_name, python_list):
+    js_str = 'var ' + var_name + ' = ['
+    for i in python_list:
+        js_str += "'" + str(i) + "',"
+    js_str += '];'
+    return js_str
+
+
+def get_js_code_str():
+    global all_dependency_id_list
+    id_list_js_define_str = convert_python_list2js_list('id_list', all_dependency_id_list)
+    js_str = "<script>"
+    js_str += 'function dependency_click(id){' \
+              + id_list_js_define_str + \
+              '     var pick_first=true;' \
+              '     var display_value="inline";' \
+              '     for(let index in id_list){' \
+              '         id_i=id_list[index];' \
+              '         if(id_i.startsWith(id+":")){' \
+              '             var to_be_hidden = document.getElementById(id_i);' \
+              '             if(pick_first){' \
+              '                 if(to_be_hidden.style.display=="none"){' \
+              '                     display_value="inline";' \
+              '                 }else{' \
+              '                     display_value="none";' \
+              '                 }' \
+              '                 pick_first=false' \
+              '             }' \
+              '             to_be_hidden.style.display=display_value;' \
+              '         }' \
+              '     }' \
+              '}'
+    js_str += "</script>"
+    return js_str
+
+
 if __name__ == "__main__":
     host = get_host_ip()
-    read_relation = pickle.load(open(read_file_path, "rb"))
-    writen_relation = pickle.load(open(writen_file_path, "rb"))
-    method2relations = pickle.load(open(method2relations_file_path, 'rb'))
-    method2global_relations = pickle.load(open(method2global_relations_file_path, 'rb'))
+
+    read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
+    writen_relation = pickle.load(open(written_relation_compressed_path, "rb"))
+
+    method2relations = pickle.load(open(method2relations_compressed_path, 'rb'))
+    method2global_relations = pickle.load(open(method2global_relations_compressed_path, 'rb'))
+
+    methodKey2methodFeatureRelationList = \
+        pickle.load(open(methodKey2methodFeatureRelationList_compressed_path, 'rb'))
+    fieldKey2fieldFeatureRelationList = \
+        pickle.load(open(fieldKey2fieldFeatureRelationList_compressed_path, 'rb'))
+
     LV2relations = pickle.load(open(LV2relations_file_path, 'rb'))
     fieldkey2fieldTypekey = pickle.load(open(fieldkey2fieldTypekey_path, 'rb'))
     LVKey2LVTypeKey = pickle.load(open(LVKey2LVTypeKey_path, 'rb'))
@@ -220,10 +294,6 @@ if __name__ == "__main__":
     fieldKey2srcLoc = pickle.load(open(fieldKey2srcLoc_path, 'rb'))
     methodKey2methodFeature = pickle.load(open(methodKey2methodFeature_file_path, 'rb'))
     fieldKey2fieldFeature = pickle.load(open(fieldKey2fieldFeature_file_path, 'rb'))
-    methodKey2methodFeatureRelationList = \
-        pickle.load(open(methodKey2methodFeatureRelationList_file_path, 'rb'))
-    fieldKey2fieldFeatureRelationList = \
-        pickle.load(open(fieldKey2fieldFeatureRelationList_file_path, 'rb'))
     method2lv_dependency_in_dir = pickle.load(open(method2lv_dependency_in_dir_file_path, 'rb'))
     method2lv_dependency_out_dir = pickle.load(open(method2lv_dependency_out_dir_file_path, 'rb'))
 
@@ -240,6 +310,7 @@ if __name__ == "__main__":
     listen_socket.listen(1)
     print('Serving HTTP on host:port  ' + str(host) + ':' + str(PORT) + ' ...')
     while True:
+        all_dependency_id_list = []
         client_connection, client_address = listen_socket.accept()
         request = client_connection.recv(1024)
         request_str = request.decode("utf-8")
@@ -247,6 +318,7 @@ if __name__ == "__main__":
         request_str = request_str[5:-10]
         http_response = "HTTP/1.1 200 OK\r\n"
         http_response += "\r\n"
+        shorter_key = to_shorter_key(request_str)
         if request_str.endswith(":src"):  # 函数的源码
             http_response += "<h1>" + request_str + "</h1>\n\n"
             methodkey = request_str[:-3]
@@ -266,18 +338,18 @@ if __name__ == "__main__":
             http_response += "<br>"
             http_response += get_parameter_and_return_html(request_str)
             if request_str in methodKey2methodFeature:
-                http_response += get_method_feature_html(request_str,
-                                                         methodKey2methodFeature[request_str])
-            if request_str in method2relations:
-                relation_list = method2relations[request_str]
+                http_response += get_method_feature_html(
+                    request_str, methodKey2methodFeature[request_str])
+            if shorter_key in method2relations:
+                relation_list = method2relations[shorter_key]
                 http_response += get_all_local_variable_html(relation_list)
                 http_response += get_dependency_html(
                     method2lv_dependency_in_dir[request_str],
                     method2lv_dependency_out_dir[request_str],
-                    'local variable',len(request_str))
+                    'local variable', len(request_str), 'lv_id_')
                 http_response += get_relation_with_local_html(relation_list)
-            if request_str in method2relations:
-                relation_list = method2global_relations[request_str]
+            if shorter_key in method2global_relations:
+                relation_list = method2global_relations[shorter_key]
                 relation_list.sort(key=lambda e: e[0])
                 http_response += get_relation_without_local_html(relation_list)
         elif request_str in LVKey2LVTypeKey:  # 局部变量的历程
@@ -298,18 +370,18 @@ if __name__ == "__main__":
                 http_response += r0 + " <--- " + r1
                 http_response += ' (' + r[2] + ')'
                 http_response += "<br><br>"
-        elif request_str in methodKey2methodFeatureRelationList:
+        elif shorter_key in methodKey2methodFeatureRelationList:
             http_response += "<h1>" + request_str + "</h1>"
-            relation_list = methodKey2methodFeatureRelationList[request_str]
+            relation_list = methodKey2methodFeatureRelationList[shorter_key]
             relation_list.sort(key=lambda e: e[0])
             for r in relation_list:
-                http_response += r[0] + ' <--- ' + r[1] + '<br><br>'
-        elif request_str in fieldKey2fieldFeatureRelationList:
+                http_response += to_longer_key(r[0]) + ' <--- ' + to_longer_key(r[1]) + '<br><br>'
+        elif shorter_key in fieldKey2fieldFeatureRelationList:
             http_response += "<h1>" + request_str + "</h1>"
-            relation_list = fieldKey2fieldFeatureRelationList[request_str]
+            relation_list = fieldKey2fieldFeatureRelationList[shorter_key]
             relation_list.sort(key=lambda e: e[0])
             for r in relation_list:
-                http_response += r[0] + ' <--- ' + r[1] + '<br><br>'
+                http_response += to_longer_key(r[0]) + ' <--- ' + to_longer_key(r[1]) + '<br><br>'
         else:
             http_response += "<h1>" + request_str + "</h1>"
             if request_str in interfaceType:
@@ -340,7 +412,7 @@ if __name__ == "__main__":
                 http_response += get_dependency_html(
                     class2field_dependency_in_dir[request_str],
                     class2field_dependency_out_dir[request_str],
-                    'field',len(request_str))
+                    'field', len(request_str), 'f_id_')
             if request_str in typekey2methodkey:  # 类的方法
                 http_response += "<h1>" + "methods" + "</h1>"
                 field_keys = typekey2methodkey[request_str]
@@ -351,7 +423,7 @@ if __name__ == "__main__":
                 http_response += get_dependency_html(
                     class2method_dependency_in_dir[request_str],
                     class2method_dependency_out_dir[request_str],
-                    'method',len(request_str))
+                    'method', len(request_str), 'm_id_')
             if request_str in fieldkey2fieldTypekey:  # 属性
                 fieldType = fieldkey2fieldTypekey[request_str]
                 http_response += 'type: <a href="http://' + host + ':8888/' + fieldType + '">' + fieldType + "</a><br><br>"
@@ -374,22 +446,24 @@ if __name__ == "__main__":
                         src_abs_dir + src_loc["fileName"], src_loc["startLine"] + 1, src_loc["endLine"])
                 http_response += get_field_feature_html(request_str, fieldKey2fieldFeature[request_str])
             http_response += "<br><br>"
-            if request_str in read_relation:
+            if shorter_key in read_relation:
                 http_response += "<h1>be read by:</h1>"
                 reads = [
-                    '<b><a href="http://' + host + ':8888/' + a[0] + '">' + a[0] + "</a></b>" + " ||| " +
-                    '<br>' +
-                    '<a href="http://' + host + ':8888/' + a[1] + '">' + a[1] + "</a>"
-                    for a in read_relation[request_str]]
+                    '<b><a href="http://' + host + ':8888/' + to_longer_key(a[0]) + '">' +
+                    to_longer_key(a[0]) + "</a></b>" + " ||| " + '<br>' +
+                    '<a href="http://' + host + ':8888/' + to_longer_key(a[1]) + '">' +
+                    to_longer_key(a[1]) + "</a>"
+                    for a in read_relation[shorter_key]]
                 reads.sort()
                 http_response += "<br><br>".join(reads) + "<br><br>"
-            if request_str in writen_relation:
+            if shorter_key in writen_relation:
                 http_response += "<h1>be writen by:</h1>"
                 writes = [
-                    '<b><a href="http://' + host + ':8888/' + a[0] + '">' + a[0] + "</a></b>" + " ||| " +
-                    '<br>' +
-                    '<a href="http://' + host + ':8888/' + a[1] + '">' + a[1] + "</a>"
-                    for a in writen_relation[request_str]]
+                    '<b><a href="http://' + host + ':8888/' + to_longer_key(a[0]) + '">' +
+                    to_longer_key(a[0]) + "</a></b>" + " ||| " + '<br>' +
+                    '<a href="http://' + host + ':8888/' + to_longer_key(a[1]) + '">' +
+                    to_longer_key(a[1]) + "</a>"
+                    for a in writen_relation[shorter_key]]
                 writes.sort()
                 http_response += "<br><br>".join(writes) + "<br><br>"
             if request_str in type2instance_for_field:  # 类的实例 属性
@@ -404,6 +478,8 @@ if __name__ == "__main__":
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
+        http_response += get_js_code_str()
+        http_response = decompress_by_replace(http_response, [])
         print(request_str)
         client_connection.sendall(http_response.encode("utf-8"))
         client_connection.close()

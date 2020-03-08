@@ -54,14 +54,20 @@ def get_feature_key(key, i):
 
 
 def get_method_key_from_parameter_key(parameter_key):
-    mk = parameter_key[0:-10]
-    if not mk.endswith(':'):
-        mk = mk[0:-1]
-    return mk
+    if len(parameter_key) > 12:
+        mk = parameter_key[0:-10]
+        if not mk.endswith(':'):
+            mk = mk[0:-1]
+        return mk
+    else:
+        return ''
 
 
 def get_method_key_from_return_key(return_key):
-    return return_key[0:-6]
+    if len(return_key) > 7:
+        return return_key[0:-6]
+    else:
+        return ''
 
 
 def get_key_from_reference(reference_key):

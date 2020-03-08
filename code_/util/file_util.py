@@ -19,6 +19,7 @@ methodKey2srcLoc_json_path = json_folder + 'methodKey2src.json'
 fieldKey2srcLoc_json_path = json_folder + 'fieldKey2src.json'
 
 data_abs_dir = current_dir + '/data_/'
+compressed_data_abs_dir = current_dir + '/data_/compressed/'
 txt_abs_dir = current_dir + '/txt_/'
 src_abs_dir = current_dir + '/androidSrc/'
 methodKey2srcLoc_path = data_abs_dir + 'methodKey2src.pkl'
@@ -36,8 +37,9 @@ subTypes_path = data_abs_dir + 'subTypes.pkl'
 typekey2fieldkey_path = data_abs_dir + 'typekey2fieldkey.pkl'
 typekey2methodkey_path = data_abs_dir + 'typekey2methodkey.pkl'
 typeKey2package_path = data_abs_dir + 'typeKey2package.pkl'
-read_file_path = data_abs_dir + 'read_relation.pkl'
-writen_file_path = data_abs_dir + 'writen_relation.pkl'
+read_relation_file_path = data_abs_dir + 'read_relation.pkl'
+writen_relation_file_path = data_abs_dir + 'writen_relation.pkl'
+
 particle_relations_file_path = data_abs_dir + 'particle_relations.pkl'
 method2particle_relations_file_path = data_abs_dir + 'method2particle_relations.pkl'
 method2relations_file_path = data_abs_dir + 'method2relations.pkl'
@@ -61,6 +63,21 @@ class2field_dependency_out_dir_file_path = data_abs_dir + 'class2field_dependenc
 
 class2method_dependency_in_dir_file_path = data_abs_dir + 'class2method_dependency_in_dir.pkl'
 class2method_dependency_out_dir_file_path = data_abs_dir + 'class2method_dependency_out_dir.pkl'
+
+long_key2shorter_key_dict_path = compressed_data_abs_dir + 'long_key2shorter_key_dict.pkl'
+long_key2shorter_key_dict_reverse_path = compressed_data_abs_dir + 'long_key2shorter_key_dict_reverse.pkl'
+
+read_relation_compressed_path = compressed_data_abs_dir + 'read_relation_compressed.pkl'
+written_relation_compressed_path = compressed_data_abs_dir + 'written_relation_compressed.pkl'
+
+method2relations_compressed_path = compressed_data_abs_dir + 'method2relations_compressed.pkl'
+method2global_relations_compressed_path = compressed_data_abs_dir + 'method2global_relations_compressed.pkl'
+
+methodKey2methodFeatureRelationList_compressed_path = \
+    compressed_data_abs_dir + 'methodKey2methodFeatureRelationList_compressed.pkl'
+fieldKey2fieldFeatureRelationList_compressed_path = \
+    compressed_data_abs_dir + 'fieldKey2fieldFeatureRelationList_compressed.pkl'
+
 
 
 def get_lines(file_path, start_line, end_line):
