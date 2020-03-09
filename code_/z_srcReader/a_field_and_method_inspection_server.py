@@ -48,17 +48,57 @@ def get_parameter_and_return_html(method_key):
 def get_all_local_variable_html(relation_list):
     html_str = "<h1>all local variables:</h1>"
     local_variables = []
+    order_min_map = {}
+    order_max_map = {}
+    order_count_map = {}
     for r in relation_list:
         r0long = to_longer_key(r[0])
         if r0long in LVKey2LVTypeKey:
+            order = r[3]
+            # init order_min_map
+            if r0long not in order_min_map:
+                order_min_map[r0long] = 10000000
+                order_max_map[r0long] = -1
+                order_count_map[r0long] = []
+            order_count_map[r0long].append(order)
+            # search for max
+            if order > order_max_map[r0long]:
+                order_max_map[r0long] = order
+            # search for min
+            if order < order_min_map[r0long]:
+                order_min_map[r0long] = order
             local_variables.append(r0long)
         r1long = to_longer_key(r[1])
         if r1long in LVKey2LVTypeKey:
+            order = r[3]
+            # init order_min_map
+            if r1long not in order_min_map:
+                order_min_map[r1long] = 10000000
+                order_max_map[r1long] = -1
+                order_count_map[r1long] = []
+            order_count_map[r1long].append(order)
+            # search for max
+            if order > order_max_map[r1long]:
+                order_max_map[r1long] = order
+            # search for min
+            if order < order_min_map[r1long]:
+                order_min_map[r1long] = order
             local_variables.append(r1long)
+
         local_variables = list(set(local_variables))
         local_variables.sort()
     for lv in local_variables:
-        html_str += '<a href="http://' + host + ':8888/' + lv + '">' + lv + "</a>"
+        order_span = order_max_map[lv] - order_min_map[lv] + 1
+        order_count_map[lv] = list(set(order_count_map[lv]))
+        space3 = "&nbsp;&nbsp;"
+        html_str += '<a href="http://' + host + ':8888/' + lv + '">' + lv + "</a>" \
+                    + space3 + str(order_min_map[lv]) \
+                    + space3 + '-' \
+                    + space3 + str(order_max_map[lv]) \
+                    + space3 + '=' \
+                    + space3 + str(order_span) \
+                    + space3 + ':' \
+                    + space3 + str(len(order_count_map[lv]))
         html_str += "<br><br>"
     return html_str
 
@@ -78,10 +118,10 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
     all_dependency_id_list.append(id)
-    display_str=''
-    if len(super_list)>0:
-        display_str='style="display:none"'
-    html_str = '<text '+display_str+' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' + padding + \
+    display_str = ""
+    if len(super_list) > 0:
+        display_str = 'style="display:none"'
+    html_str = '<text ' + display_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' + padding + \
                make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + "<br></text>"
     id_count = 0
     if lv not in super_list:
