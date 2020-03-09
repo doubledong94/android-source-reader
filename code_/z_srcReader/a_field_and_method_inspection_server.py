@@ -226,10 +226,10 @@ def get_method_feature_html(methodKey, features):
     html_str += make_link_html('# 14: field=methodCall ' + str(features[14]), get_feature_key(methodKey, 14)) + "<br>"
     html_str += make_link_html('# 15: field=field ' + str(features[15]), get_feature_key(methodKey, 15)) + "<br><br>"
 
-    html_str += make_link_html('# 16: guest=parameter ' + str(features[16]), get_feature_key(methodKey, 16)) + "<br>"
-    html_str += make_link_html('# 17: guest=local ' + str(features[17]), get_feature_key(methodKey, 17)) + "<br>"
-    html_str += make_link_html('# 18: guest=methodCall ' + str(features[18]), get_feature_key(methodKey, 18)) + "<br>"
-    html_str += make_link_html('# 19: guest=field ' + str(features[19]), get_feature_key(methodKey, 19)) + "<br><br>"
+    html_str += make_link_html('# 16: reference=parameter ' + str(features[16]), get_feature_key(methodKey, 16)) + "<br>"
+    html_str += make_link_html('# 17: reference=local ' + str(features[17]), get_feature_key(methodKey, 17)) + "<br>"
+    html_str += make_link_html('# 18: reference=methodCall ' + str(features[18]), get_feature_key(methodKey, 18)) + "<br>"
+    html_str += make_link_html('# 19: reference=field ' + str(features[19]), get_feature_key(methodKey, 19)) + "<br><br>"
 
     html_str += make_link_html('# 20: parameter=parameter ' + str(features[20]), get_feature_key(methodKey, 20)) + \
                 "<br>"
@@ -254,7 +254,7 @@ def get_field_feature_html(fieldKey, features):
     html_str += make_link_html('# 2: methodCall=genericField ' + str(features[2]),
                                get_feature_key(fieldKey, 2)) + '<br>'
     html_str += make_link_html('# 3: field=genericField ' + str(features[3]), get_feature_key(fieldKey, 3)) + '<br>'
-    html_str += make_link_html('# 4: guest=genericField ' + str(features[4]), get_feature_key(fieldKey, 4)) + '<br>'
+    html_str += make_link_html('# 4: reference=genericField ' + str(features[4]), get_feature_key(fieldKey, 4)) + '<br>'
     html_str += make_link_html('# 5: local=genericField(methodCall) ' + str(features[5]),
                                get_feature_key(fieldKey, 5)) + '<br><br>'
     html_str += '# genericField is written<br>'
