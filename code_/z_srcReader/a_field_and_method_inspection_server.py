@@ -86,8 +86,9 @@ def get_all_local_variable_html(relation_list):
             local_variables.append(r1long)
 
         local_variables = list(set(local_variables))
-        local_variables.sort()
-    for lv in local_variables:
+        sorted_by_min_order = [[k, v] for k, v in order_min_map.items()]
+        sorted_by_min_order.sort(key=lambda e: e[1])
+    for lv, min_order in sorted_by_min_order:
         order_span = order_max_map[lv] - order_min_map[lv] + 1
         order_count_map[lv] = list(set(order_count_map[lv]))
         space3 = "&nbsp;&nbsp;"
