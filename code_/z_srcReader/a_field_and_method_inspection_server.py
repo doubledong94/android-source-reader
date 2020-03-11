@@ -423,9 +423,11 @@ if __name__ == "__main__":
         elif shorter_key in methodKey2methodFeatureRelationList:
             http_response += "<h1>" + request_str + "</h1>"
             relation_list = methodKey2methodFeatureRelationList[shorter_key]
-            relation_list.sort(key=lambda e: e[0])
+            relation_list.sort(key=lambda e: e[2])
             for r in relation_list:
-                http_response += to_longer_key(r[0]) + ' <--- ' + to_longer_key(r[1]) + '<br><br>'
+                http_response += 's' + str(r[2]) + '&nbsp;&nbsp;' + \
+                                 to_longer_key(r[0]) + ' <--- ' + to_longer_key(r[1]) \
+                                 + '&nbsp;&nbsp;' + r[3] + '<br><br>'
         elif shorter_key in fieldKey2fieldFeatureRelationList:
             http_response += "<h1>" + request_str + "</h1>"
             relation_list = fieldKey2fieldFeatureRelationList[shorter_key]
