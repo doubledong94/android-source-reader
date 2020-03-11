@@ -64,6 +64,8 @@ class2field_dependency_out_dir_file_path = data_abs_dir + 'class2field_dependenc
 class2method_dependency_in_dir_file_path = data_abs_dir + 'class2method_dependency_in_dir.pkl'
 class2method_dependency_out_dir_file_path = data_abs_dir + 'class2method_dependency_out_dir.pkl'
 
+method_size_map_path = data_abs_dir + 'method_size_map.pkl'
+
 long_key2shorter_key_dict_path = compressed_data_abs_dir + 'long_key2shorter_key_dict.pkl'
 long_key2shorter_key_dict_reverse_path = compressed_data_abs_dir + 'long_key2shorter_key_dict_reverse.pkl'
 

@@ -13,7 +13,8 @@ from code_.util.file_util import \
     class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
     class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path, read_relation_compressed_path, \
     written_relation_compressed_path, method2relations_compressed_path, method2global_relations_compressed_path, \
-    methodKey2methodFeatureRelationList_compressed_path, fieldKey2fieldFeatureRelationList_compressed_path
+    methodKey2methodFeatureRelationList_compressed_path, fieldKey2fieldFeatureRelationList_compressed_path, \
+    method_size_map_path
 from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key, get_method_key_from_parameter_key
 from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
     to_longer_key
@@ -114,7 +115,7 @@ def make_colored_text_html(text, color):
 
 
 def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list):
-    global all_dependency_id_list
+    global all_dependency_id_list, method_size_map
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
@@ -122,8 +123,11 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
     display_str = ""
     if len(super_list) > 0:
         display_str = 'style="display:none"'
+    method_size = ""
+    if lv in method_size_map:
+        method_size = "&nbsp;&nbsp;" + str(method_size_map[lv])
     html_str = '<text ' + display_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' + padding + \
-               make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + "<br></text>"
+               make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + method_size + "<br></text>"
     id_count = 0
     if lv not in super_list:
         super_list.append(lv)
@@ -138,9 +142,9 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
     return html_str
 
 
-def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str, type_key_len, id_start):
+def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_len, id_start):
     all_lv_key = []
-    for k, v in lv_dependency_out_dir.items():
+    for k, v in dependency_out_dir.items():
         all_lv_key.append(k)
         for vi in v:
             all_lv_key.append(vi)
@@ -148,26 +152,26 @@ def get_dependency_html(lv_dependency_in_dir, lv_dependency_out_dir, id_str, typ
     out_zero_lv_list = []
     in_zero_lv_list = []
     for lv_key in all_lv_key:
-        if lv_key not in lv_dependency_out_dir.keys() or len(lv_dependency_out_dir[lv_key]) == 0:
+        if lv_key not in dependency_out_dir.keys() or len(dependency_out_dir[lv_key]) == 0:
             out_zero_lv_list.append(lv_key)
-        elif lv_key in lv_dependency_out_dir[lv_key] and len(lv_dependency_out_dir[lv_key]) == 1:
+        elif lv_key in dependency_out_dir[lv_key] and len(dependency_out_dir[lv_key]) == 1:
             out_zero_lv_list.append(lv_key)
     for lv_key in all_lv_key:
-        if lv_key not in lv_dependency_in_dir.keys() or len(lv_dependency_in_dir[lv_key]) == 0:
+        if lv_key not in dependency_in_dir.keys() or len(dependency_in_dir[lv_key]) == 0:
             in_zero_lv_list.append(lv_key)
-        elif lv_key in lv_dependency_in_dir[lv_key] and len(lv_dependency_in_dir[lv_key]) == 1:
+        elif lv_key in dependency_in_dir[lv_key] and len(dependency_in_dir[lv_key]) == 1:
             in_zero_lv_list.append(lv_key)
     html_str = '<h1>' + id_str + ' dependency in:</h1>'
     id_count = 0
     for lv in out_zero_lv_list:
         id_count += 1
-        html_str += recur_for_dependency(lv, lv_dependency_in_dir, 0, [],
+        html_str += recur_for_dependency(lv, dependency_in_dir, 0, [],
                                          type_key_len, [id_start + str(id_count)])
         html_str += '<br>'
     html_str += '<h1>' + id_str + ' dependency out:</h1>'
     for lv in in_zero_lv_list:
         id_count += 1
-        html_str += recur_for_dependency(lv, lv_dependency_out_dir, 0, [],
+        html_str += recur_for_dependency(lv, dependency_out_dir, 0, [],
                                          type_key_len, [id_start + str(id_count)])
         html_str += '<br>'
     return html_str
@@ -226,10 +230,13 @@ def get_method_feature_html(methodKey, features):
     html_str += make_link_html('# 14: field=methodCall ' + str(features[14]), get_feature_key(methodKey, 14)) + "<br>"
     html_str += make_link_html('# 15: field=field ' + str(features[15]), get_feature_key(methodKey, 15)) + "<br><br>"
 
-    html_str += make_link_html('# 16: reference=parameter ' + str(features[16]), get_feature_key(methodKey, 16)) + "<br>"
+    html_str += make_link_html('# 16: reference=parameter ' + str(features[16]),
+                               get_feature_key(methodKey, 16)) + "<br>"
     html_str += make_link_html('# 17: reference=local ' + str(features[17]), get_feature_key(methodKey, 17)) + "<br>"
-    html_str += make_link_html('# 18: reference=methodCall ' + str(features[18]), get_feature_key(methodKey, 18)) + "<br>"
-    html_str += make_link_html('# 19: reference=field ' + str(features[19]), get_feature_key(methodKey, 19)) + "<br><br>"
+    html_str += make_link_html('# 18: reference=methodCall ' + str(features[18]),
+                               get_feature_key(methodKey, 18)) + "<br>"
+    html_str += make_link_html('# 19: reference=field ' + str(features[19]),
+                               get_feature_key(methodKey, 19)) + "<br><br>"
 
     html_str += make_link_html('# 20: parameter=parameter ' + str(features[20]), get_feature_key(methodKey, 20)) + \
                 "<br>"
@@ -343,6 +350,8 @@ if __name__ == "__main__":
 
     class2method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
     class2method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
+
+    method_size_map = pickle.load(open(method_size_map_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
