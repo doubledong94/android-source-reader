@@ -114,6 +114,18 @@ def make_colored_text_html(text, color):
     return '<text style="background-color:' + color + '">' + text + '</text>'
 
 
+def sort_dependency_by_method_size(dependency_list):
+    dependency_in_dir_list_with_size = []
+    for dependency_in_dir_i in dependency_list:
+        dependency_in_dir_list_with_size.append([
+            dependency_in_dir_i,
+            method_size_map[dependency_in_dir_i] if dependency_in_dir_i in method_size_map else 1
+        ])
+    dependency_in_dir_list_with_size.sort(key=lambda e: e[1], reverse=True)
+    dependency_in_dir_list = [i[0] for i in dependency_in_dir_list_with_size]
+    return dependency_in_dir_list
+
+
 def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list):
     global all_dependency_id_list, method_size_map
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
@@ -132,7 +144,10 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
     if lv not in super_list:
         super_list.append(lv)
         if lv in lv_dependency_in_dir:
-            for child_node in lv_dependency_in_dir[lv]:
+            dependency_in_dir_list = lv_dependency_in_dir[lv]
+            if not method_size == "":
+                dependency_in_dir_list = sort_dependency_by_method_size(dependency_in_dir_list)
+            for child_node in dependency_in_dir_list:
                 id_count += 1
                 id_list_copy = id_list.copy()
                 id_list_copy.append(str(id_count))
@@ -163,6 +178,8 @@ def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_
             in_zero_lv_list.append(lv_key)
     html_str = '<h1>' + id_str + ' dependency in:</h1>'
     id_count = 0
+    out_zero_lv_list = sort_dependency_by_method_size(out_zero_lv_list)
+    in_zero_lv_list = sort_dependency_by_method_size(in_zero_lv_list)
     for lv in out_zero_lv_list:
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_in_dir, 0, [],
