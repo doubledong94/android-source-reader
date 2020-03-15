@@ -64,8 +64,23 @@ class2field_dependency_out_dir_file_path = data_abs_dir + 'class2field_dependenc
 class2method_dependency_in_dir_file_path = data_abs_dir + 'class2method_dependency_in_dir.pkl'
 class2method_dependency_out_dir_file_path = data_abs_dir + 'class2method_dependency_out_dir.pkl'
 
-method_size_map_path = data_abs_dir + 'method_size_map.pkl'
+global_method_dependency_in_dir_path = data_abs_dir + 'global_method_dependency_in_dir.pkl'
+global_method_dependency_out_dir_path = data_abs_dir + 'global_method_dependency_out_dir.pkl'
+
+method_size_map_in_path = data_abs_dir + 'method_size_map_in.pkl'
 method_size_map_out_path = data_abs_dir + 'method_size_map_out.pkl'
+
+global_method_size_map_in_path = data_abs_dir + 'global_method_size_map_in.pkl'
+global_method_size_map_out_path = data_abs_dir + 'global_method_size_map_out.pkl'
+
+class2self_responsibility_in_path = data_abs_dir + 'class2self_responsibility_in.pkl'
+class2self_responsibility_out_path = data_abs_dir + 'class2self_responsibility_out.pkl'
+
+class2self_dependency_in_sum_path = data_abs_dir + 'class2self_dependency_in_sum.pkl'
+class2self_dependency_out_sum_path = data_abs_dir + 'class2self_dependency_out_sum.pkl'
+
+class2global_dependency_in_sum_path = data_abs_dir + 'class2global_dependency_in_sum.pkl'
+class2global_dependency_out_sum_path = data_abs_dir + 'class2global_dependency_out_sum.pkl'
 
 long_key2shorter_key_dict_path = compressed_data_abs_dir + 'long_key2shorter_key_dict.pkl'
 long_key2shorter_key_dict_reverse_path = compressed_data_abs_dir + 'long_key2shorter_key_dict_reverse.pkl'
@@ -80,7 +95,6 @@ methodKey2methodFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'methodKey2methodFeatureRelationList_compressed.pkl'
 fieldKey2fieldFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'fieldKey2fieldFeatureRelationList_compressed.pkl'
-
 
 
 def get_lines(file_path, start_line, end_line):

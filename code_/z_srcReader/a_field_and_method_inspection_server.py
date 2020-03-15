@@ -14,7 +14,9 @@ from code_.util.file_util import \
     class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path, read_relation_compressed_path, \
     written_relation_compressed_path, method2relations_compressed_path, method2global_relations_compressed_path, \
     methodKey2methodFeatureRelationList_compressed_path, fieldKey2fieldFeatureRelationList_compressed_path, \
-    method_size_map_path, method_size_map_out_path
+    method_size_map_in_path, method_size_map_out_path, global_method_size_map_in_path, global_method_size_map_out_path, \
+    class2self_responsibility_in_path, class2self_responsibility_out_path, class2self_dependency_in_sum_path, \
+    class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path
 from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key, get_method_key_from_parameter_key
 from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
     to_longer_key
@@ -126,8 +128,9 @@ def sort_dependency_by_method_size(dependency_list, method_size_map):
     return dependency_in_dir_list
 
 
-def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list, method_size_map):
-    global all_dependency_id_list
+def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list, method_size_map,
+                         method_size_map_for_sorting):
+    global all_dependency_id_list, method_size_map_in, method_size_map_out
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
@@ -137,7 +140,19 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
         display_str = 'style="display:none"'
     method_size = ""
     if lv in method_size_map:
-        method_size = "&nbsp;&nbsp;" + str(method_size_map[lv])
+        method_size_in_class = method_size_map_in[lv] if lv in method_size_map_in else 1
+        method_size_out_class = method_size_map_out[lv] if lv in method_size_map_out else 1
+        method_size_in_global = global_method_size_map_in[lv] if lv in global_method_size_map_in else 1
+        method_size_out_global = global_method_size_map_out[lv] if lv in global_method_size_map_out else 1
+        method_size = "&nbsp;&nbsp;" + \
+                      str(method_size_in_class) \
+                      + "&nbsp;:&nbsp;" + str(method_size_out_class) \
+                      + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
+                      str(method_size_in_global) \
+                      + "&nbsp;:&nbsp;" + str(method_size_out_global) \
+                      + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
+                      str(round(method_size_in_class / method_size_in_global, 3)) \
+                      + "&nbsp;:&nbsp;" + str(round(method_size_out_class / method_size_out_global, 3))
     html_str = '<text ' + display_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' + padding + \
                make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + method_size + "<br></text>"
     id_count = 0
@@ -147,7 +162,7 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
             dependency_in_dir_list = lv_dependency_in_dir[lv]
             if not method_size == "":
                 dependency_in_dir_list = \
-                    sort_dependency_by_method_size(dependency_in_dir_list, method_size_map)
+                    sort_dependency_by_method_size(dependency_in_dir_list, method_size_map_for_sorting)
             for child_node in dependency_in_dir_list:
                 id_count += 1
                 id_list_copy = id_list.copy()
@@ -155,7 +170,7 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
                 super_list_copy = super_list.copy()
                 html_str += recur_for_dependency(
                     child_node, lv_dependency_in_dir, depth + 1, super_list_copy, type_key_len, id_list_copy,
-                    method_size_map)
+                    method_size_map, method_size_map_for_sorting)
     return html_str
 
 
@@ -180,18 +195,20 @@ def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_
             in_zero_lv_list.append(lv_key)
     html_str = '<h1>' + id_str + ' dependency in:</h1>'
     id_count = 0
-    out_zero_lv_list = sort_dependency_by_method_size(out_zero_lv_list, method_size_map_in)
-    in_zero_lv_list = sort_dependency_by_method_size(in_zero_lv_list, method_size_map_out)
+    out_zero_lv_list = sort_dependency_by_method_size(out_zero_lv_list, global_method_size_map_in)
+    in_zero_lv_list = sort_dependency_by_method_size(in_zero_lv_list, global_method_size_map_out)
     for lv in out_zero_lv_list:
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_in_dir, 0, [],
-                                         type_key_len, [id_start + str(id_count)], method_size_map_in)
+                                         type_key_len, [id_start + str(id_count)], method_size_map_in,
+                                         global_method_size_map_in)
         html_str += '<br>'
     html_str += '<h1>' + id_str + ' dependency out:</h1>'
     for lv in in_zero_lv_list:
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_out_dir, 0, [],
-                                         type_key_len, [id_start + str(id_count)], method_size_map_out)
+                                         type_key_len, [id_start + str(id_count)], method_size_map_out,
+                                         global_method_size_map_out)
         html_str += '<br>'
     return html_str
 
@@ -370,8 +387,20 @@ if __name__ == "__main__":
     class2method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
     class2method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
 
-    method_size_map_in = pickle.load(open(method_size_map_path, 'rb'))
+    method_size_map_in = pickle.load(open(method_size_map_in_path, 'rb'))
     method_size_map_out = pickle.load(open(method_size_map_out_path, 'rb'))
+
+    global_method_size_map_in = pickle.load(open(global_method_size_map_in_path, 'rb'))
+    global_method_size_map_out = pickle.load(open(global_method_size_map_out_path, 'rb'))
+
+    class2self_responsibility_in = pickle.load(open(class2self_responsibility_in_path, 'rb'))
+    class2self_responsibility_out = pickle.load(open(class2self_responsibility_out_path, 'rb'))
+
+    class2self_dependency_in_sum = pickle.load(open(class2self_dependency_in_sum_path, 'rb'))
+    class2self_dependency_out_sum = pickle.load(open(class2self_dependency_out_sum_path, 'rb'))
+
+    class2global_dependency_in_sum = pickle.load(open(class2global_dependency_in_sum_path, 'rb'))
+    class2global_dependency_out_sum = pickle.load(open(class2global_dependency_out_sum_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -389,6 +418,46 @@ if __name__ == "__main__":
         http_response = "HTTP/1.1 200 OK\r\n"
         http_response += "\r\n"
         shorter_key = to_shorter_key(request_str)
+        if request_str == "classes":
+            classes_resp_in = [[i, j] for i, j in class2global_dependency_in_sum.items()]
+            classes_resp_in.sort(key=lambda e: e[1], reverse=True)
+            classes_resp_out = [[i, j] for i, j in class2global_dependency_out_sum.items()]
+            classes_resp_out.sort(key=lambda e: e[1], reverse=True)
+            http_response += "<h1>" + "class self responsibility in" + "</h1>\n\n"
+            for i in range(len(classes_resp_in)):
+                mk = classes_resp_in[i][0]
+                http_response += make_link_html(mk, mk) \
+                                 + "&nbsp;&nbsp;" \
+                                 + str(class2self_dependency_in_sum[mk]) \
+                                 + "&nbsp;:&nbsp;" \
+                                 + str(class2self_dependency_out_sum[mk]) \
+                                 + "&nbsp;|&nbsp;" \
+                                 + str(class2global_dependency_in_sum[mk]) \
+                                 + "&nbsp;:&nbsp;" \
+                                 + str(class2global_dependency_out_sum[mk]) \
+                                 + "&nbsp;|&nbsp;" \
+                                 + str(class2self_responsibility_in[mk])\
+                                 + "&nbsp;:&nbsp;" \
+                                 + str(class2self_responsibility_out[mk])                                 
+                http_response += '<br>'
+            http_response += '<br>'
+            http_response += "<h1>" + "class self responsibility out" + "</h1>\n\n"
+            for i in range(len(classes_resp_out)):
+                mk = classes_resp_out[i][0]
+                http_response += make_link_html(mk, mk) \
+                                 + "&nbsp;&nbsp;" \
+                                 + str(class2self_dependency_in_sum[mk]) \
+                                 + "&nbsp;:&nbsp;" \
+                                 + str(class2self_dependency_out_sum[mk]) \
+                                 + "&nbsp;|&nbsp;" \
+                                 + str(class2global_dependency_in_sum[mk]) \
+                                 + "&nbsp;:&nbsp;" \
+                                 + str(class2global_dependency_out_sum[mk]) \
+                                 + "&nbsp;|&nbsp;" \
+                                 + str(class2self_responsibility_in[mk])\
+                                 + "&nbsp;:&nbsp;" \
+                                 + str(class2self_responsibility_out[mk])                                 
+                http_response += '<br>'
         if request_str.endswith(":src"):  # 函数的源码
             http_response += "<h1>" + request_str + "</h1>\n\n"
             methodkey = request_str[:-3]
