@@ -107,6 +107,10 @@ def get_lines(file_path, start_line, end_line):
             ret_str += line
 
     f.close()
+    ret_str = ret_str.replace('<', '&lt;')
+    ret_str = ret_str.replace('>', '&gt;')
+    ret_str = ret_str.replace('<=', '&le;')
+    ret_str = ret_str.replace('>=', '&ge;')
     ret_str = ret_str.replace('\n', '<br>')
     ret_str = ret_str.replace('\t', '    ')
     ret_str = ret_str.replace(' ', '&nbsp;')
