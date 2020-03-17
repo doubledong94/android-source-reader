@@ -552,6 +552,7 @@ if __name__ == "__main__":
             if request_str in typekey2fieldkey:  # 类的属性
                 http_response += "<h1>" + "fields" + "</h1>"
                 field_keys = typekey2fieldkey[request_str]
+                field_keys = list(set(field_keys))
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
@@ -563,6 +564,7 @@ if __name__ == "__main__":
             if request_str in typekey2methodkey:  # 类的方法
                 http_response += "<h1>" + "methods" + "</h1>"
                 field_keys = typekey2methodkey[request_str]
+                field_keys = list(set(field_keys))
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
