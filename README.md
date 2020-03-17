@@ -1,5 +1,9 @@
 # androidSrcReader
 
+请在百度网盘下载数据与代码
+链接：https://pan.baidu.com/s/1yfMtPEIns_QWc6DY_uO2GQ 
+提取码：25ng
+
 ##  如何使用：
 
 >1. 下载到本地后，将androidSrc.zip与data_.rar解压到当前文件夹，双击run.cmd（windows系统，软件要求 python3）就可以了，linux也可以运行，自行改后缀不多说<br/>
