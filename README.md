@@ -6,7 +6,7 @@
 
 ##  如何使用：
 
->1. 下载到本地后，将androidSrc.zip与data_.rar解压到当前文件夹，双击run.cmd（windows系统，软件要求 python3）就可以了，linux也可以运行，自行改后缀不多说<br/>
+>1. 下载到本地解压后，将androidSrc.zip与data_.rar解压到当前文件夹，双击run.cmd（windows系统，软件要求 python3）就可以了，linux也可以运行，自行改后缀不多说<br/>
 >2. run.cmd开始运行时会加载2g多的数据（data_.rar中的数据），并不会打印加载进度，如果你看到内存正在猛增或居高不下，那还得耐心等待<br/>
 >3. 加载结束时会打印出你的局域网ip和端口号8888，这时你就可以打开浏览器，地址栏输入： http://localhost:8888/android.view.View.View::Context,AttributeSet,int,int: （包括最后的冒号），就进入了View类的构造函数，我们从这个函数开始，看看这个工具如何帮你读代码
 
