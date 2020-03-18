@@ -406,6 +406,14 @@ def get_js_code_str():
     return js_str
 
 
+def remove_duplicated_item_from_list_retaining_order(list_):
+    new_list = []
+    for i in list_:
+        if i not in new_list:
+            new_list.append(i)
+    return new_list
+
+
 if __name__ == "__main__":
     host = get_host_ip()
 
@@ -604,19 +612,21 @@ if __name__ == "__main__":
             if request_str in superTypes:  # 类的父类
                 http_response += "<h1>" + "super types" + "</h1>"
                 super_types = superTypes[request_str]
+                super_types = remove_duplicated_item_from_list_retaining_order(super_types)
                 for st in super_types:
                     http_response += '<a href="http://' + host + ':8888/' + st + '">' + st + "</a>"
                     http_response += "<br><br>"
             if request_str in subTypes:  # 类的子类
                 http_response += "<h1>" + "sub types" + "</h1>"
                 super_types = subTypes[request_str]
+                super_types = remove_duplicated_item_from_list_retaining_order(super_types)
                 for st in super_types:
                     http_response += '<a href="http://' + host + ':8888/' + st + '">' + st + "</a>"
                     http_response += "<br><br>"
             if request_str in typekey2fieldkey:  # 类的属性
                 http_response += "<h1>" + "fields" + "</h1>"
                 field_keys = typekey2fieldkey[request_str]
-                field_keys = list(set(field_keys))
+                field_keys = remove_duplicated_item_from_list_retaining_order(field_keys)
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
@@ -628,7 +638,7 @@ if __name__ == "__main__":
             if request_str in typekey2methodkey:  # 类的方法
                 http_response += "<h1>" + "methods" + "</h1>"
                 field_keys = typekey2methodkey[request_str]
-                field_keys = list(set(field_keys))
+                field_keys = remove_duplicated_item_from_list_retaining_order(field_keys)
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
