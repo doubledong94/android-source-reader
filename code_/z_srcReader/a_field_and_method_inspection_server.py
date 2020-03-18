@@ -16,7 +16,9 @@ from code_.util.file_util import \
     methodKey2methodFeatureRelationList_compressed_path, fieldKey2fieldFeatureRelationList_compressed_path, \
     method_size_map_in_path, method_size_map_out_path, global_method_size_map_in_path, global_method_size_map_out_path, \
     class2self_responsibility_in_path, class2self_responsibility_out_path, class2self_dependency_in_sum_path, \
-    class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path
+    class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path, \
+    get_method_clusters_path, method_clusters_path, method2methodFromOtherClass_in_dir_path, \
+    method2methodFromOtherClass_out_dir_path
 from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key, get_method_key_from_parameter_key
 from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
     to_longer_key
@@ -46,6 +48,23 @@ def get_parameter_and_return_html(method_key):
     html_str += '<a href="http://' + host + ':8888/' + return_str + '">' + return_str + "</a>"
     html_str += "<br><br>"
     return html_str
+
+
+def get_method_cluster_html(mk):
+    global method_clusters
+    if mk in method_clusters and len(method_clusters[mk]) > 0:
+        html_str = "<h1>accompanied by:</h1>"
+        li = method_clusters[mk]
+        li.sort(key=lambda e: e[1], reverse=True)
+        countdown = 10
+        for i in li:
+            countdown -= 1
+            if countdown < 0:
+                break
+            html_str += make_link_html(i[0], i[0]) + "&nbsp;&nbsp;" + str(i[1]) + '<br>'
+        return html_str
+    else:
+        return ""
 
 
 def get_all_local_variable_html(relation_list):
@@ -129,7 +148,7 @@ def sort_dependency_by_method_size(dependency_list, method_size_map):
 
 
 def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list, method_size_map,
-                         method_size_map_for_sorting):
+                         method_size_map_for_sorting, method2method_from_other_class):
     global all_dependency_id_list, method_size_map_in, method_size_map_out
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
@@ -170,7 +189,46 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
                 super_list_copy = super_list.copy()
                 html_str += recur_for_dependency(
                     child_node, lv_dependency_in_dir, depth + 1, super_list_copy, type_key_len, id_list_copy,
-                    method_size_map, method_size_map_for_sorting)
+                    method_size_map, method_size_map_for_sorting, method2method_from_other_class)
+        if depth < 3 and lv in method2method_from_other_class and \
+                len(method2method_from_other_class[lv]) > 0:
+            from_other_class = ":from_other_class"
+            depth += 1
+            padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
+            id += from_other_class
+            all_dependency_id_list.append(id)
+            html_str += '<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+                        + padding + make_colored_text_html(from_other_class, dependency_colors[depth]) \
+                        + "<br></text>"
+            depth += 1
+            padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
+            other_method_count = 0
+            for mk_from_other_class in method2method_from_other_class[lv]:
+                other_method_count += 1
+                other_id = id + ":" + str(other_method_count)
+                all_dependency_id_list.append(other_id)
+                if mk_from_other_class in method_size_map:
+                    method_size_in_class = method_size_map_in[mk_from_other_class] \
+                        if mk_from_other_class in method_size_map_in else 1
+                    method_size_out_class = method_size_map_out[mk_from_other_class] \
+                        if mk_from_other_class in method_size_map_out else 1
+                    method_size_in_global = global_method_size_map_in[mk_from_other_class] \
+                        if mk_from_other_class in global_method_size_map_in else 1
+                    method_size_out_global = global_method_size_map_out[mk_from_other_class] \
+                        if mk_from_other_class in global_method_size_map_out else 1
+                    method_size = "&nbsp;&nbsp;" + \
+                                  str(method_size_in_class) \
+                                  + "&nbsp;:&nbsp;" + str(method_size_out_class) \
+                                  + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
+                                  str(method_size_in_global) \
+                                  + "&nbsp;:&nbsp;" + str(method_size_out_global) \
+                                  + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
+                                  str(round(method_size_in_class / method_size_in_global, 3)) \
+                                  + "&nbsp;:&nbsp;" + str(round(method_size_out_class / method_size_out_global, 3))
+                html_str += '<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' \
+                            + other_id + '\')" id=' + other_id + '>' + padding + \
+                            make_colored_text_html(mk_from_other_class, dependency_colors[depth]) \
+                            + method_size + "<br></text>"
     return html_str
 
 
@@ -201,14 +259,14 @@ def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_in_dir, 0, [],
                                          type_key_len, [id_start + str(id_count)], method_size_map_in,
-                                         global_method_size_map_in)
+                                         global_method_size_map_in, method2methodFromOtherClass_in_dir)
         html_str += '<br>'
     html_str += '<h1>' + id_str + ' dependency out:</h1>'
     for lv in in_zero_lv_list:
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_out_dir, 0, [],
                                          type_key_len, [id_start + str(id_count)], method_size_map_out,
-                                         global_method_size_map_out)
+                                         global_method_size_map_out, method2methodFromOtherClass_out_dir)
         html_str += '<br>'
     return html_str
 
@@ -352,7 +410,7 @@ if __name__ == "__main__":
     host = get_host_ip()
 
     read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
-    writen_relation = pickle.load(open(written_relation_compressed_path, "rb"))
+    written_relation = pickle.load(open(written_relation_compressed_path, "rb"))
 
     method2relations = pickle.load(open(method2relations_compressed_path, 'rb'))
     method2global_relations = pickle.load(open(method2global_relations_compressed_path, 'rb'))
@@ -384,8 +442,8 @@ if __name__ == "__main__":
     class2field_dependency_in_dir = pickle.load(open(class2field_dependency_in_dir_file_path, 'rb'))
     class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))
 
-    class2method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
-    class2method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
+    global_method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
+    global_method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
 
     method_size_map_in = pickle.load(open(method_size_map_in_path, 'rb'))
     method_size_map_out = pickle.load(open(method_size_map_out_path, 'rb'))
@@ -401,6 +459,11 @@ if __name__ == "__main__":
 
     class2global_dependency_in_sum = pickle.load(open(class2global_dependency_in_sum_path, 'rb'))
     class2global_dependency_out_sum = pickle.load(open(class2global_dependency_out_sum_path, 'rb'))
+
+    method2methodFromOtherClass_in_dir = pickle.load(open(method2methodFromOtherClass_in_dir_path, 'rb'))
+    method2methodFromOtherClass_out_dir = pickle.load(open(method2methodFromOtherClass_out_dir_path, 'rb'))
+
+    # method_clusters = pickle.load(open(method_clusters_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -436,9 +499,9 @@ if __name__ == "__main__":
                                  + "&nbsp;:&nbsp;" \
                                  + str(class2global_dependency_out_sum[mk]) \
                                  + "&nbsp;|&nbsp;" \
-                                 + str(class2self_responsibility_in[mk])\
+                                 + str(class2self_responsibility_in[mk]) \
                                  + "&nbsp;:&nbsp;" \
-                                 + str(class2self_responsibility_out[mk])                                 
+                                 + str(class2self_responsibility_out[mk])
                 http_response += '<br>'
             http_response += '<br>'
             http_response += "<h1>" + "class self responsibility out" + "</h1>\n\n"
@@ -454,9 +517,9 @@ if __name__ == "__main__":
                                  + "&nbsp;:&nbsp;" \
                                  + str(class2global_dependency_out_sum[mk]) \
                                  + "&nbsp;|&nbsp;" \
-                                 + str(class2self_responsibility_in[mk])\
+                                 + str(class2self_responsibility_in[mk]) \
                                  + "&nbsp;:&nbsp;" \
-                                 + str(class2self_responsibility_out[mk])                                 
+                                 + str(class2self_responsibility_out[mk])
                 http_response += '<br>'
         if request_str.endswith(":src"):  # 函数的源码
             http_response += "<h1>" + request_str + "</h1>\n\n"
@@ -476,6 +539,7 @@ if __name__ == "__main__":
             http_response += 'src: <a href="http://' + host + ':8888/' + src_ + '">' + src_ + "</a><br>"
             http_response += "<br>"
             http_response += get_parameter_and_return_html(request_str)
+            # http_response += get_method_cluster_html(request_str)
             if request_str in methodKey2methodFeature:
                 http_response += get_method_feature_html(
                     request_str, methodKey2methodFeature[request_str])
@@ -568,10 +632,10 @@ if __name__ == "__main__":
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
-            if request_str in class2method_dependency_in_dir:
+            if request_str in global_method_dependency_in_dir:
                 http_response += get_dependency_html(
-                    class2method_dependency_in_dir[request_str],
-                    class2method_dependency_out_dir[request_str],
+                    global_method_dependency_in_dir[request_str],
+                    global_method_dependency_out_dir[request_str],
                     'method', len(request_str), 'm_id_')
             if request_str in fieldkey2fieldTypekey:  # 属性
                 fieldType = fieldkey2fieldTypekey[request_str]
@@ -595,32 +659,70 @@ if __name__ == "__main__":
                         src_abs_dir + src_loc["fileName"], src_loc["startLine"] + 1, src_loc["endLine"])
                 http_response += get_field_feature_html(request_str, fieldKey2fieldFeature[request_str])
             http_response += "<br><br>"
-            if shorter_key in read_relation:
-                http_response += "<h1>be read by:</h1>"
-                reads = [
-                    '<b><a href="http://' + host + ':8888/' + to_longer_key(a[0]) + '">' +
-                    to_longer_key(a[0]) + "</a></b>" + " ||| " + '<br>' +
-                    '<a href="http://' + host + ':8888/' + to_longer_key(a[1]) + '">' +
-                    to_longer_key(a[1]) + "</a>"
-                    for a in read_relation[shorter_key]]
-                reads.sort()
-                http_response += "<br><br>".join(reads) + "<br><br>"
-            if shorter_key in writen_relation:
-                http_response += "<h1>be writen by:</h1>"
-                writes = [
-                    '<b><a href="http://' + host + ':8888/' + to_longer_key(a[0]) + '">' +
-                    to_longer_key(a[0]) + "</a></b>" + " ||| " + '<br>' +
-                    '<a href="http://' + host + ':8888/' + to_longer_key(a[1]) + '">' +
-                    to_longer_key(a[1]) + "</a>"
-                    for a in writen_relation[shorter_key]]
-                writes.sort()
-                http_response += "<br><br>".join(writes) + "<br><br>"
+            if shorter_key in read_relation or shorter_key in written_relation:
+                http_response += "<h1>is read and written by:</h1>"
+                global_relation_list = read_relation[shorter_key] if shorter_key in read_relation else []
+                global_written_relation_list = written_relation[shorter_key] if shorter_key in written_relation else []
+                method2global_read_relation_list = {}
+                is_read_relation = True
+                for item in global_relation_list:
+                    if item[1] in method2global_read_relation_list:
+                        method2global_read_relation_list[item[1]].append([item[0], item[2], item[3], is_read_relation])
+                    else:
+                        method2global_read_relation_list[item[1]] = [[item[0], item[2], item[3], is_read_relation]]
+                is_read_relation = False
+                for item in global_written_relation_list:
+                    if item[1] in method2global_read_relation_list:
+                        method2global_read_relation_list[item[1]].append([item[0], item[2], item[3], is_read_relation])
+                    else:
+                        method2global_read_relation_list[item[1]] = [[item[0], item[2], item[3], is_read_relation]]
+                padding_of_4_space = "".join(['&nbsp;'] * 4)
+                for k, v in method2global_read_relation_list.items():
+                    http_response += '<br>'
+                    k_longer_key = to_longer_key(k)
+                    http_response += make_link_html(k_longer_key, k_longer_key)
+                    http_response += '<br>'
+                    v.sort(key=lambda e: e[1])
+                    for vi in v:
+                        vi_long_key = to_longer_key(vi[0])
+                        if vi[3]:
+                            http_response += padding_of_4_space \
+                                             + 's' + str(vi[1]) + ' ' \
+                                             + make_link_html(vi_long_key, vi_long_key) \
+                                             + ' <--- ' + request_str + ' (' + vi[2] + ')'
+                        else:
+                            http_response += padding_of_4_space \
+                                             + 's' + str(vi[1]) + ' ' \
+                                             + request_str + ' <--- ' \
+                                             + make_link_html(vi_long_key, vi_long_key) + ' (' + vi[2] + ')'
+                        http_response += '<br>'
             if request_str in type2instance_for_field:  # 类的实例 属性
-                http_response += "<h1>" + "instance for field" + "</h1>"
                 field_keys = type2instance_for_field[request_str]
+                instance_for_param = []
+                instance_for_return = []
+                instance_for_field = []
                 for fk in field_keys:
-                    http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
-                    http_response += "<br>"
+                    if is_parameter_key(fk):
+                        instance_for_param.append(fk)
+                    elif is_return_key(fk):
+                        instance_for_return.append(fk)
+                    else:
+                        instance_for_field.append(fk)
+                if len(instance_for_param) > 0:
+                    http_response += "<h1>" + "instance for paramter" + "</h1>"
+                    for fk in instance_for_param:
+                        http_response += make_link_html(fk, fk)
+                        http_response += "<br>"
+                if len(instance_for_return) > 0:
+                    http_response += "<h1>" + "instance for return" + "</h1>"
+                    for fk in instance_for_return:
+                        http_response += make_link_html(fk, fk)
+                        http_response += "<br>"
+                if len(instance_for_field) > 0:
+                    http_response += "<h1>" + "instance for field" + "</h1>"
+                    for fk in instance_for_field:
+                        http_response += make_link_html(fk, fk)
+                        http_response += "<br>"
             if request_str in type2instance_for_local:  # 类的实例 局部变量
                 http_response += "<h1>" + "instance for local" + "</h1>"
                 field_keys = type2instance_for_local[request_str]

@@ -64,6 +64,9 @@ class2field_dependency_out_dir_file_path = data_abs_dir + 'class2field_dependenc
 class2method_dependency_in_dir_file_path = data_abs_dir + 'class2method_dependency_in_dir.pkl'
 class2method_dependency_out_dir_file_path = data_abs_dir + 'class2method_dependency_out_dir.pkl'
 
+method2methodFromOtherClass_in_dir_path = data_abs_dir + 'method2methodFromOtherClass_in_dir.pkl'
+method2methodFromOtherClass_out_dir_path = data_abs_dir + 'method2methodFromOtherClass_out_dir.pkl'
+
 global_method_dependency_in_dir_path = data_abs_dir + 'global_method_dependency_in_dir.pkl'
 global_method_dependency_out_dir_path = data_abs_dir + 'global_method_dependency_out_dir.pkl'
 
@@ -90,6 +93,13 @@ written_relation_compressed_path = compressed_data_abs_dir + 'written_relation_c
 
 method2relations_compressed_path = compressed_data_abs_dir + 'method2relations_compressed.pkl'
 method2global_relations_compressed_path = compressed_data_abs_dir + 'method2global_relations_compressed.pkl'
+
+method_clusters_path = data_abs_dir + 'method_clusters.pkl'
+
+
+def get_method_clusters_path(i):
+    return data_abs_dir + 'method_clusters' + str(i) + '.pkl'
+
 
 methodKey2methodFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'methodKey2methodFeatureRelationList_compressed.pkl'

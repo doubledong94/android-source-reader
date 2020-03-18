@@ -25,10 +25,6 @@ def is_parameter_key(key):
     return False
 
 
-def is_guest_key(key):
-    return key.endswith(":Guest")
-
-
 def is_condition_key(key):
     return key.endswith(":Condition") or key.endswith(":Case")
 
@@ -38,7 +34,7 @@ def is_return_key(key):
 
 
 def is_local_key(key):
-    return key.endswith(":Local")
+    return key.endswith(":Local") or key == 'false' or key == 'true'
 
 
 def is_method_reference_key(key):
