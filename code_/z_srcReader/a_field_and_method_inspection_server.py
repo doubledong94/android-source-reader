@@ -535,7 +535,7 @@ if __name__ == "__main__":
             if methodkey in methodKey2srcLoc:
                 src_loc = methodKey2srcLoc[methodkey]
                 http_response += get_lines(
-                    src_abs_dir + src_loc["fileName"], src_loc["startLine"] + 1, src_loc["endLine"])
+                    src_abs_dir + src_loc["fileName"], src_loc["startLine"], src_loc["endLine"])
         elif request_str.endswith(":"):  # 函数的内容
             http_response += "<h1>" + request_str + "</h1>\n\n"
             return_type = fieldkey2fieldTypekey[request_str + "Return"]
@@ -606,6 +606,7 @@ if __name__ == "__main__":
             if request_str in interfaceType:
                 http_response += "<h1>" + "interface types" + "</h1>"
                 interface_types = interfaceType[request_str]
+                interface_types = remove_duplicated_item_from_list_retaining_order(interface_types)
                 for st in interface_types:
                     http_response += '<a href="http://' + host + ':8888/' + st + '">' + st + "</a>"
                     http_response += "<br><br>"
@@ -666,8 +667,9 @@ if __name__ == "__main__":
                     http_response += "<h1>src</h1>"
                     src_loc = fieldKey2srcLoc[request_str]
                     http_response += get_lines(
-                        src_abs_dir + src_loc["fileName"], src_loc["startLine"] + 1, src_loc["endLine"])
-                http_response += get_field_feature_html(request_str, fieldKey2fieldFeature[request_str])
+                        src_abs_dir + src_loc["fileName"], src_loc["startLine"], src_loc["endLine"])
+                if request_str in fieldKey2fieldFeature:
+                    http_response += get_field_feature_html(request_str, fieldKey2fieldFeature[request_str])
             http_response += "<br><br>"
             if shorter_key in read_relation or shorter_key in written_relation:
                 http_response += "<h1>is read and written by:</h1>"
