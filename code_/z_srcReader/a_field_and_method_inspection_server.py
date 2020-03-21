@@ -3,27 +3,41 @@
 import pickle
 import socket
 
+from code_.d_methodAndFieldFeature.a_methodFeature import get_method_feature_relation_list, method_feature_len
 from code_.util.file_util import \
     LV2relations_file_path, LVKey2LVTypeKey_path, \
     fieldkey2fieldTypekey_path, typekey2fieldkey_path, \
     typekey2methodkey_path, superTypes_path, subTypes_path, fieldKey2typeKey_path, methodKey2typeKey_path, \
     type2instance_for_field_file_path, type2instance_for_local_file_path, methodKey2srcLoc_path, get_lines, src_abs_dir, \
-    fieldKey2srcLoc_path, interfaceType_path, methodKey2methodFeature_file_path, fieldKey2fieldFeature_file_path, \
+    fieldKey2srcLoc_path, interfaceType_path, fieldKey2fieldFeature_file_path, \
     method2lv_dependency_in_dir_file_path, method2lv_dependency_out_dir_file_path, \
     class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
     class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path, read_relation_compressed_path, \
     written_relation_compressed_path, method2relations_compressed_path, method2global_relations_compressed_path, \
-    methodKey2methodFeatureRelationList_compressed_path, fieldKey2fieldFeatureRelationList_compressed_path, \
+    fieldKey2fieldFeatureRelationList_compressed_path, \
     method_size_map_in_path, method_size_map_out_path, global_method_size_map_in_path, global_method_size_map_out_path, \
     class2self_responsibility_in_path, class2self_responsibility_out_path, class2self_dependency_in_sum_path, \
     class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path, \
-    get_method_clusters_path, method_clusters_path, method2methodFromOtherClass_in_dir_path, \
+    method2methodFromOtherClass_in_dir_path, \
     method2methodFromOtherClass_out_dir_path
-from code_.util.key_util import get_feature_key, is_parameter_key, is_return_key, get_method_key_from_parameter_key
+from code_.util.key_util import get_method_feature_key, is_parameter_key, is_return_key, \
+    get_method_key_from_parameter_key, is_method_feature_key, get_method_feature_index, get_method_key_from_feature
 from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
     to_longer_key
 
 host = ""
+method_key2method_features = {}
+
+
+def get_method_features(method_key):
+    global method_key2method_features
+    if method_key in method_key2method_features:
+        method_features = method_key2method_features[method_key]
+    else:
+        method_features = get_method_feature_relation_list(
+            method_key, method2global_relations[method_key])
+        method_key2method_features[method_key] = method_features
+    return method_features
 
 
 def get_host_ip():
@@ -302,47 +316,67 @@ def make_link_html(text, link):
 
 def get_method_feature_html(methodKey, features):
     html_str = "<h1>method features:</h1>"
-    html_str += make_link_html('# 0: return=parameter ' + str(features[0]), get_feature_key(methodKey, 0)) + "<br>"
-    html_str += make_link_html('# 1: return=local ' + str(features[1]), get_feature_key(methodKey, 1)) + "<br>"
-    html_str += make_link_html('# 2: return=methodCall ' + str(features[2]), get_feature_key(methodKey, 2)) + "<br>"
-    html_str += make_link_html('# 3: return=field ' + str(features[3]), get_feature_key(methodKey, 3)) + "<br><br>"
+    str_list = [
+        "# 0: return = parameter",
+        "# 1: return = local",
+        "# 2: return = field",
+        "# 3: return = methodCall",
 
-    html_str += make_link_html('# 4: condition=parameter ' + str(features[4]), get_feature_key(methodKey, 4)) + "<br>"
-    html_str += make_link_html('# 5: condition=local ' + str(features[5]), get_feature_key(methodKey, 5)) + "<br>"
-    html_str += make_link_html('# 6: condition=methodCall ' + str(features[6]), get_feature_key(methodKey, 6)) + "<br>"
-    html_str += make_link_html('# 7: condition=field ' + str(features[7]), get_feature_key(methodKey, 7)) + "<br><br>"
+        "# 4: return = parameter",
+        "# 5: condition = parameter",
+        "# 6: field = parameter",
+        "# 7: methodCall = parameter",
+        "# 8: reference = parameter",
 
-    html_str += make_link_html('# 8: methodCall=parameter ' + str(features[8]), get_feature_key(methodKey, 8)) + "<br>"
-    html_str += make_link_html('# 9: methodCall=local ' + str(features[9]), get_feature_key(methodKey, 9)) + "<br>"
-    html_str += make_link_html('# 10: methodCall=methodCall ' + str(features[10]), get_feature_key(methodKey, 10)) \
-                + "<br>"
-    html_str += make_link_html('# 11: methodCall=field ' + str(features[11]), get_feature_key(methodKey, 11)) \
-                + "<br><br>"
+        "# 09: condition = parameter",
+        "# 10: condition = local",
+        "# 11: condition = field",
+        "# 12: condition = methodCall",
 
-    html_str += make_link_html('# 12: field=parameter ' + str(features[12]), get_feature_key(methodKey, 12)) + "<br>"
-    html_str += make_link_html('# 13: field=local ' + str(features[13]), get_feature_key(methodKey, 13)) + "<br>"
-    html_str += make_link_html('# 14: field=methodCall ' + str(features[14]), get_feature_key(methodKey, 14)) + "<br>"
-    html_str += make_link_html('# 15: field=field ' + str(features[15]), get_feature_key(methodKey, 15)) + "<br><br>"
+        "# 13: field = parameter",
+        "# 14: field = local",
+        "# 15: field = field",
+        "# 16: field = methodCall",
 
-    html_str += make_link_html('# 16: reference=parameter ' + str(features[16]),
-                               get_feature_key(methodKey, 16)) + "<br>"
-    html_str += make_link_html('# 17: reference=local ' + str(features[17]), get_feature_key(methodKey, 17)) + "<br>"
-    html_str += make_link_html('# 18: reference=methodCall ' + str(features[18]),
-                               get_feature_key(methodKey, 18)) + "<br>"
-    html_str += make_link_html('# 19: reference=field ' + str(features[19]),
-                               get_feature_key(methodKey, 19)) + "<br><br>"
+        "# 17: return = field",
+        "# 18: condition = field",
+        "# 19: field = field",
+        "# 20: methodCall = field",
+        "# 21: reference = field",
 
-    html_str += make_link_html('# 20: parameter=parameter ' + str(features[20]), get_feature_key(methodKey, 20)) + \
-                "<br>"
-    html_str += make_link_html('# 21: parameter=local ' + str(features[21]), get_feature_key(methodKey, 21)) + \
-                "<br>"
-    html_str += make_link_html('# 22: parameter=methodCall ' + str(features[22]), get_feature_key(methodKey, 22)) + \
-                "<br>"
-    html_str += make_link_html('# 23: parameter=field ' + str(features[23]), get_feature_key(methodKey, 23)) + \
-                "<br><br>"
+        "# 22: methodCall = parameter",
+        "# 23: methodCall = local",
+        "# 24: methodCall = field",
+        "# 25: methodCall = methodCall",
 
-    html_str += make_link_html('# 24: local=methodCall ' + str(features[24]), get_feature_key(methodKey, 24)) \
-                + "<br><br>"
+        "# 26: return = methodCall",
+        "# 27: local = methodCall",
+        "# 28: condition = methodCall",
+        "# 29: field = methodCall",
+        "# 30: methodCall = methodCall",
+        "# 31: reference = methodCall",
+
+        "# 32: reference = parameter",
+        "# 33: reference = local",
+        "# 34: reference = field",
+        "# 35: reference = methodCall",
+
+        "# 36: parameter = parameter",
+        "# 37: parameter = local",
+        "# 38: parameter = field",
+        "# 39: parameter = methodCall",
+    ]
+    for i in range(len(str_list)):
+        str_list[i] = str_list[i].replace(' ', '&nbsp;')
+
+    blank_space_index = [3, 8, 12, 16, 21, 25, 31, 35]
+    for i in range(method_feature_len):
+        feature_count = len(features[i])
+        feature_count_str = ' ' + str(feature_count) if feature_count > 0 else ''
+        html_str += make_link_html(str_list[i] + feature_count_str,
+                                   get_method_feature_key(methodKey, i)) + "<br>"
+        if i in blank_space_index:
+            html_str += "<br>"
     return html_str
 
 
@@ -350,22 +384,31 @@ def get_field_feature_html(fieldKey, features):
     html_str = "<h1>field features:</h1>"
     fieldKey += ':'
     html_str += '# genericField is read<br>'
-    html_str += make_link_html('# 0: return=genericField ' + str(features[0]), get_feature_key(fieldKey, 0)) + '<br>'
-    html_str += make_link_html('# 1: condition=genericField ' + str(features[1]), get_feature_key(fieldKey, 1)) + '<br>'
+    html_str += make_link_html('# 0: return=genericField ' + str(features[0]),
+                               get_method_feature_key(fieldKey, 0)) + '<br>'
+    html_str += make_link_html('# 1: condition=genericField ' + str(features[1]),
+                               get_method_feature_key(fieldKey, 1)) + '<br>'
     html_str += make_link_html('# 2: methodCall=genericField ' + str(features[2]),
-                               get_feature_key(fieldKey, 2)) + '<br>'
-    html_str += make_link_html('# 3: field=genericField ' + str(features[3]), get_feature_key(fieldKey, 3)) + '<br>'
-    html_str += make_link_html('# 4: reference=genericField ' + str(features[4]), get_feature_key(fieldKey, 4)) + '<br>'
+                               get_method_feature_key(fieldKey, 2)) + '<br>'
+    html_str += make_link_html('# 3: field=genericField ' + str(features[3]),
+                               get_method_feature_key(fieldKey, 3)) + '<br>'
+    html_str += make_link_html('# 4: reference=genericField ' + str(features[4]),
+                               get_method_feature_key(fieldKey, 4)) + '<br>'
     html_str += make_link_html('# 5: local=genericField(methodCall) ' + str(features[5]),
-                               get_feature_key(fieldKey, 5)) + '<br><br>'
+                               get_method_feature_key(fieldKey, 5)) + '<br><br>'
     html_str += '# genericField is written<br>'
-    html_str += make_link_html('# 6: genericField=field ' + str(features[6]), get_feature_key(fieldKey, 6)) + '<br>'
-    html_str += make_link_html('# 7: genericField=return ' + str(features[7]), get_feature_key(fieldKey, 7)) + '<br>'
-    html_str += make_link_html('# 8: genericField=parameter ' + str(features[8]), get_feature_key(fieldKey, 8)) + '<br>'
-    html_str += make_link_html('# 9: genericField=local ' + str(features[9]), get_feature_key(fieldKey, 9)) + '<br><br>'
+    html_str += make_link_html('# 6: genericField=field ' + str(features[6]),
+                               get_method_feature_key(fieldKey, 6)) + '<br>'
+    html_str += make_link_html('# 7: genericField=return ' + str(features[7]),
+                               get_method_feature_key(fieldKey, 7)) + '<br>'
+    html_str += make_link_html('# 8: genericField=parameter ' + str(features[8]),
+                               get_method_feature_key(fieldKey, 8)) + '<br>'
+    html_str += make_link_html('# 9: genericField=local ' + str(features[9]),
+                               get_method_feature_key(fieldKey, 9)) + '<br><br>'
 
     html_str += '# genericField is self assigned<br>'
-    html_str += make_link_html('# 9: self assignment ' + str(features[10]), get_feature_key(fieldKey, 10)) + '<br><br>'
+    html_str += make_link_html('# 9: self assignment ' + str(features[10]),
+                               get_method_feature_key(fieldKey, 10)) + '<br><br>'
     html_str = html_str.replace('genericField', '<b>genericField</b>')
     return html_str
 
@@ -423,8 +466,6 @@ if __name__ == "__main__":
     method2relations = pickle.load(open(method2relations_compressed_path, 'rb'))
     method2global_relations = pickle.load(open(method2global_relations_compressed_path, 'rb'))
 
-    methodKey2methodFeatureRelationList = \
-        pickle.load(open(methodKey2methodFeatureRelationList_compressed_path, 'rb'))
     fieldKey2fieldFeatureRelationList = \
         pickle.load(open(fieldKey2fieldFeatureRelationList_compressed_path, 'rb'))
 
@@ -442,7 +483,6 @@ if __name__ == "__main__":
     type2instance_for_local = pickle.load(open(type2instance_for_local_file_path, 'rb'))
     methodKey2srcLoc = pickle.load(open(methodKey2srcLoc_path, 'rb'))
     fieldKey2srcLoc = pickle.load(open(fieldKey2srcLoc_path, 'rb'))
-    methodKey2methodFeature = pickle.load(open(methodKey2methodFeature_file_path, 'rb'))
     fieldKey2fieldFeature = pickle.load(open(fieldKey2fieldFeature_file_path, 'rb'))
     method2lv_dependency_in_dir = pickle.load(open(method2lv_dependency_in_dir_file_path, 'rb'))
     method2lv_dependency_out_dir = pickle.load(open(method2lv_dependency_out_dir_file_path, 'rb'))
@@ -547,10 +587,10 @@ if __name__ == "__main__":
             http_response += 'src: <a href="http://' + host + ':8888/' + src_ + '">' + src_ + "</a><br>"
             http_response += "<br>"
             http_response += get_parameter_and_return_html(request_str)
-            # http_response += get_method_cluster_html(request_str)
-            if request_str in methodKey2methodFeature:
-                http_response += get_method_feature_html(
-                    request_str, methodKey2methodFeature[request_str])
+            # method features
+            method_features = get_method_features(shorter_key)
+            http_response += get_method_feature_html(
+                request_str, method_features)
             if shorter_key in method2relations:
                 relation_list = method2relations[shorter_key]
                 http_response += get_all_local_variable_html(relation_list)
@@ -581,9 +621,10 @@ if __name__ == "__main__":
                 http_response += r0 + " <--- " + r1
                 http_response += ' (' + r[2] + ')'
                 http_response += "<br><br>"
-        elif shorter_key in methodKey2methodFeatureRelationList:
+        elif is_method_feature_key(request_str):
             http_response += "<h1>" + request_str + "</h1>"
-            relation_list = methodKey2methodFeatureRelationList[shorter_key]
+            method_features = get_method_features(to_shorter_key(get_method_key_from_feature(request_str)))
+            relation_list = method_features[get_method_feature_index(request_str)]
             relation_list.sort(key=lambda e: e[2])
             for r in relation_list:
                 r0long = to_longer_key(r[0])

@@ -48,8 +48,6 @@ method2global_relations_file_path = data_abs_dir + 'method2global_relations.pkl'
 global_relations_file_path = data_abs_dir + 'global_relations.pkl'
 type2instance_for_field_file_path = data_abs_dir + 'type2instance_for_field.pkl'
 type2instance_for_local_file_path = data_abs_dir + 'type2instance_for_local.pkl'
-methodKey2methodFeature_file_path = data_abs_dir + 'methodKey2methodFeature.pkl'
-methodKey2methodFeatureRelationList_file_path = data_abs_dir + 'methodKey2methodFeatureRelationList.pkl'
 fieldKey2fieldFeature_file_path = data_abs_dir + 'fieldKey2fieldFeature.pkl'
 fieldKey2fieldFeatureRelationList_file_path = data_abs_dir + 'fieldKey2fieldFeatureRelationList.pkl'
 feature_key2methodKeys_file_path = data_abs_dir + 'feature_key2methodKeys.pkl'
@@ -101,8 +99,6 @@ def get_method_clusters_path(i):
     return data_abs_dir + 'method_clusters' + str(i) + '.pkl'
 
 
-methodKey2methodFeatureRelationList_compressed_path = \
-    compressed_data_abs_dir + 'methodKey2methodFeatureRelationList_compressed.pkl'
 fieldKey2fieldFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'fieldKey2fieldFeatureRelationList_compressed.pkl'
 
