@@ -26,7 +26,7 @@ def is_parameter_key(key):
 
 
 def is_condition_key(key):
-    return key.endswith(":Condition") or key.endswith(":Case")
+    return key.endswith(":Condition") or key.endswith(":Case") or key.endswith(":Switch")
 
 
 def is_return_key(key):
@@ -104,6 +104,13 @@ def get_method_key_from_feature(feature_key):
         return feature_key[0:-8]
     else:
         return feature_key[0:-9]
+
+
+def get_field_key_from_feature(feature_key):
+    if feature_key[-2] == 'e':
+        return feature_key[0:-9]
+    else:
+        return feature_key[0:-10]
 
 
 def is_field_feature_key(key):

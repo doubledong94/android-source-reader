@@ -9,23 +9,28 @@ from code_.util.file_util import \
     fieldkey2fieldTypekey_path, typekey2fieldkey_path, \
     typekey2methodkey_path, superTypes_path, subTypes_path, fieldKey2typeKey_path, methodKey2typeKey_path, \
     type2instance_for_field_file_path, type2instance_for_local_file_path, methodKey2srcLoc_path, get_lines, src_abs_dir, \
-    fieldKey2srcLoc_path, interfaceType_path, fieldKey2fieldFeature_file_path, \
+    fieldKey2srcLoc_path, interfaceType_path, fieldKey2fieldFeatureCount_path, \
     method2lv_dependency_in_dir_file_path, method2lv_dependency_out_dir_file_path, \
     class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
     class2method_dependency_in_dir_file_path, class2method_dependency_out_dir_file_path, read_relation_compressed_path, \
     written_relation_compressed_path, method2relations_compressed_path, method2global_relations_compressed_path, \
-    fieldKey2fieldFeatureRelationList_compressed_path, \
+    fieldFeatureKey2fieldFeatureRelationList_compressed_path, \
     method_size_map_in_path, method_size_map_out_path, global_method_size_map_in_path, global_method_size_map_out_path, \
     class2self_responsibility_in_path, class2self_responsibility_out_path, class2self_dependency_in_sum_path, \
     class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path, \
     method2methodFromOtherClass_in_dir_path, \
-    method2methodFromOtherClass_out_dir_path
+    method2methodFromOtherClass_out_dir_path, type_dependency_in_path, type_dependency_out_path, type_size_out_path, \
+    type_size_in_path
 from code_.util.key_util import get_method_feature_key, is_parameter_key, is_return_key, \
-    get_method_key_from_parameter_key, is_method_feature_key, get_method_feature_index, get_method_key_from_feature
+    get_method_key_from_parameter_key, is_method_feature_key, get_method_feature_index, get_method_key_from_feature, \
+    get_field_feature_key, get_field_key_from_feature
 from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
     to_longer_key
+from code_.z_srcReader import dependency_html_util
+from code_.z_srcReader.dependency_html_util import get_size_string, get_dependency_in_and_out_html, \
+    all_id_list_for_js_variable
+from code_.z_srcReader.html_util import host
 
-host = ""
 method_key2method_features = {}
 
 
@@ -62,23 +67,6 @@ def get_parameter_and_return_html(method_key):
     html_str += '<a href="http://' + host + ':8888/' + return_str + '">' + return_str + "</a>"
     html_str += "<br><br>"
     return html_str
-
-
-def get_method_cluster_html(mk):
-    global method_clusters
-    if mk in method_clusters and len(method_clusters[mk]) > 0:
-        html_str = "<h1>accompanied by:</h1>"
-        li = method_clusters[mk]
-        li.sort(key=lambda e: e[1], reverse=True)
-        countdown = 10
-        for i in li:
-            countdown -= 1
-            if countdown < 0:
-                break
-            html_str += make_link_html(i[0], i[0]) + "&nbsp;&nbsp;" + str(i[1]) + '<br>'
-        return html_str
-    else:
-        return ""
 
 
 def get_all_local_variable_html(relation_list):
@@ -142,8 +130,6 @@ def get_all_local_variable_html(relation_list):
 
 dependency_colors = ['#f5b7b1', '#d2b4de', '#a9cce3', '#abebc6', '#f9e79f', '#f5cba7', '#d5dbdb'] * 10
 
-all_dependency_id_list = []
-
 
 def make_colored_text_html(text, color):
     return '<text style="background-color:' + color + '">' + text + '</text>'
@@ -163,7 +149,8 @@ def sort_dependency_by_method_size(dependency_list, method_size_map):
 
 def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list, method_size_map,
                          method_size_map_for_sorting, method2method_from_other_class):
-    global all_dependency_id_list, method_size_map_in, method_size_map_out
+    global method_size_in, method_size_out
+    all_dependency_id_list = dependency_html_util.all_id_list_for_js_variable
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
@@ -173,19 +160,8 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
         display_str = 'style="display:none"'
     method_size = ""
     if lv in method_size_map:
-        method_size_in_class = method_size_map_in[lv] if lv in method_size_map_in else 1
-        method_size_out_class = method_size_map_out[lv] if lv in method_size_map_out else 1
-        method_size_in_global = global_method_size_map_in[lv] if lv in global_method_size_map_in else 1
-        method_size_out_global = global_method_size_map_out[lv] if lv in global_method_size_map_out else 1
-        method_size = "&nbsp;&nbsp;" + \
-                      str(method_size_in_class) \
-                      + "&nbsp;:&nbsp;" + str(method_size_out_class) \
-                      + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
-                      str(method_size_in_global) \
-                      + "&nbsp;:&nbsp;" + str(method_size_out_global) \
-                      + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
-                      str(round(method_size_in_class / method_size_in_global, 3)) \
-                      + "&nbsp;:&nbsp;" + str(round(method_size_out_class / method_size_out_global, 3))
+        method_size = get_size_string(lv, method_size_in, method_size_out,
+                                      global_method_size_in, global_method_size_out)
     html_str = '<text ' + display_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' + padding + \
                make_colored_text_html(lv[type_key_len:], dependency_colors[depth]) + method_size + "<br></text>"
     id_count = 0
@@ -222,23 +198,9 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
                 other_id = id + ":" + str(other_method_count)
                 all_dependency_id_list.append(other_id)
                 if mk_from_other_class in method_size_map:
-                    method_size_in_class = method_size_map_in[mk_from_other_class] \
-                        if mk_from_other_class in method_size_map_in else 1
-                    method_size_out_class = method_size_map_out[mk_from_other_class] \
-                        if mk_from_other_class in method_size_map_out else 1
-                    method_size_in_global = global_method_size_map_in[mk_from_other_class] \
-                        if mk_from_other_class in global_method_size_map_in else 1
-                    method_size_out_global = global_method_size_map_out[mk_from_other_class] \
-                        if mk_from_other_class in global_method_size_map_out else 1
-                    method_size = "&nbsp;&nbsp;" + \
-                                  str(method_size_in_class) \
-                                  + "&nbsp;:&nbsp;" + str(method_size_out_class) \
-                                  + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
-                                  str(method_size_in_global) \
-                                  + "&nbsp;:&nbsp;" + str(method_size_out_global) \
-                                  + "&nbsp;&nbsp;|&nbsp;&nbsp;" + \
-                                  str(round(method_size_in_class / method_size_in_global, 3)) \
-                                  + "&nbsp;:&nbsp;" + str(round(method_size_out_class / method_size_out_global, 3))
+                    method_size = get_size_string(
+                        mk_from_other_class, method_size_in, method_size_out,
+                        global_method_size_in, global_method_size_out)
                 html_str += '<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' \
                             + other_id + '\')" id=' + other_id + '>' + padding + \
                             make_colored_text_html(mk_from_other_class, dependency_colors[depth]) \
@@ -246,7 +208,7 @@ def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_l
     return html_str
 
 
-def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_len, id_start):
+def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_len, id_head):
     all_lv_key = []
     for k, v in dependency_out_dir.items():
         all_lv_key.append(k)
@@ -265,23 +227,28 @@ def get_dependency_html(dependency_in_dir, dependency_out_dir, id_str, type_key_
             in_zero_lv_list.append(lv_key)
         elif lv_key in dependency_in_dir[lv_key] and len(dependency_in_dir[lv_key]) == 1:
             in_zero_lv_list.append(lv_key)
+    out_zero_lv_list = sort_dependency_by_method_size(out_zero_lv_list, global_method_size_in)
+    in_zero_lv_list = sort_dependency_by_method_size(in_zero_lv_list, global_method_size_out)
     html_str = '<h1>' + id_str + ' dependency in:</h1>'
     id_count = 0
-    out_zero_lv_list = sort_dependency_by_method_size(out_zero_lv_list, global_method_size_map_in)
-    in_zero_lv_list = sort_dependency_by_method_size(in_zero_lv_list, global_method_size_map_out)
     for lv in out_zero_lv_list:
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_in_dir, 0, [],
-                                         type_key_len, [id_start + str(id_count)], method_size_map_in,
-                                         global_method_size_map_in, method2methodFromOtherClass_in_dir)
+                                         type_key_len, [id_head + str(id_count)], method_size_in,
+                                         global_method_size_in, method2methodFromOtherClass_in_dir)
         html_str += '<br>'
     html_str += '<h1>' + id_str + ' dependency out:</h1>'
     for lv in in_zero_lv_list:
         id_count += 1
         html_str += recur_for_dependency(lv, dependency_out_dir, 0, [],
-                                         type_key_len, [id_start + str(id_count)], method_size_map_out,
-                                         global_method_size_map_out, method2methodFromOtherClass_out_dir)
+                                         type_key_len, [id_head + str(id_count)], method_size_out,
+                                         global_method_size_out, method2methodFromOtherClass_out_dir)
         html_str += '<br>'
+    html_str += '<h1>' + id_str + ' not involved:</h1>'
+    for k in all_lv_key:
+        if k not in dependency_in_dir and k not in dependency_out_dir:
+            html_str += make_link_html(k, k)
+            html_str += '<br>'
     return html_str
 
 
@@ -382,33 +349,32 @@ def get_method_feature_html(methodKey, features):
 
 def get_field_feature_html(fieldKey, features):
     html_str = "<h1>field features:</h1>"
-    fieldKey += ':'
     html_str += '# genericField is read<br>'
     html_str += make_link_html('# 0: return=genericField ' + str(features[0]),
-                               get_method_feature_key(fieldKey, 0)) + '<br>'
+                               get_field_feature_key(fieldKey, 0)) + '<br>'
     html_str += make_link_html('# 1: condition=genericField ' + str(features[1]),
-                               get_method_feature_key(fieldKey, 1)) + '<br>'
+                               get_field_feature_key(fieldKey, 1)) + '<br>'
     html_str += make_link_html('# 2: methodCall=genericField ' + str(features[2]),
-                               get_method_feature_key(fieldKey, 2)) + '<br>'
+                               get_field_feature_key(fieldKey, 2)) + '<br>'
     html_str += make_link_html('# 3: field=genericField ' + str(features[3]),
-                               get_method_feature_key(fieldKey, 3)) + '<br>'
+                               get_field_feature_key(fieldKey, 3)) + '<br>'
     html_str += make_link_html('# 4: reference=genericField ' + str(features[4]),
-                               get_method_feature_key(fieldKey, 4)) + '<br>'
+                               get_field_feature_key(fieldKey, 4)) + '<br>'
     html_str += make_link_html('# 5: local=genericField(methodCall) ' + str(features[5]),
-                               get_method_feature_key(fieldKey, 5)) + '<br><br>'
+                               get_field_feature_key(fieldKey, 5)) + '<br><br>'
     html_str += '# genericField is written<br>'
     html_str += make_link_html('# 6: genericField=field ' + str(features[6]),
-                               get_method_feature_key(fieldKey, 6)) + '<br>'
+                               get_field_feature_key(fieldKey, 6)) + '<br>'
     html_str += make_link_html('# 7: genericField=return ' + str(features[7]),
-                               get_method_feature_key(fieldKey, 7)) + '<br>'
+                               get_field_feature_key(fieldKey, 7)) + '<br>'
     html_str += make_link_html('# 8: genericField=parameter ' + str(features[8]),
-                               get_method_feature_key(fieldKey, 8)) + '<br>'
+                               get_field_feature_key(fieldKey, 8)) + '<br>'
     html_str += make_link_html('# 9: genericField=local ' + str(features[9]),
-                               get_method_feature_key(fieldKey, 9)) + '<br><br>'
+                               get_field_feature_key(fieldKey, 9)) + '<br><br>'
 
     html_str += '# genericField is self assigned<br>'
     html_str += make_link_html('# 9: self assignment ' + str(features[10]),
-                               get_method_feature_key(fieldKey, 10)) + '<br><br>'
+                               get_field_feature_key(fieldKey, 10)) + '<br><br>'
     html_str = html_str.replace('genericField', '<b>genericField</b>')
     return html_str
 
@@ -422,7 +388,7 @@ def convert_python_list2js_list(var_name, python_list):
 
 
 def get_js_code_str():
-    global all_dependency_id_list
+    all_dependency_id_list = dependency_html_util.all_id_list_for_js_variable
     id_list_js_define_str = convert_python_list2js_list('id_list', all_dependency_id_list)
     js_str = "<script>"
     js_str += 'function dependency_click(id){' \
@@ -457,8 +423,78 @@ def remove_duplicated_item_from_list_retaining_order(list_):
     return new_list
 
 
+def get_field_relation_html(field_key, relation_list):
+    http_str = ''
+    method2global_read_relation_list = {}
+    for item in relation_list:
+        is_read_relation = to_longer_key(item[1]) == field_key
+        relation_key = item[0] if is_read_relation else item[1]
+        if item[1] in method2global_read_relation_list:
+            method2global_read_relation_list[item[4]].append([relation_key, item[2], item[3], is_read_relation])
+        else:
+            method2global_read_relation_list[item[4]] = [[relation_key, item[2], item[3], is_read_relation]]
+    padding_of_4_space = "".join(['&nbsp;'] * 4)
+    for k, v in method2global_read_relation_list.items():
+        http_str += '<br>'
+        k_longer_key = to_longer_key(k)
+        http_str += make_link_html(k_longer_key, k_longer_key)
+        http_str += '<br>'
+        v.sort(key=lambda e: e[1])
+        for vi in v:
+            vi_long_key = to_longer_key(vi[0])
+            if vi[3]:
+                http_str += padding_of_4_space \
+                            + 's' + str(vi[1]) + ' ' \
+                            + make_link_html(vi_long_key, vi_long_key) \
+                            + ' <--- ' + field_key + ' (' + vi[2] + ')'
+            else:
+                http_str += padding_of_4_space \
+                            + 's' + str(vi[1]) + ' ' \
+                            + field_key + ' <--- ' \
+                            + make_link_html(vi_long_key, vi_long_key) + ' (' + vi[2] + ')'
+            http_str += '<br>'
+    return http_str
+
+
+def get_field_read_and_written_relation_html(global_read_relation_list, global_written_relation_list):
+    http_str = ''
+    method2global_read_relation_list = {}
+    is_read_relation = True
+    for item in global_read_relation_list:
+        if item[1] in method2global_read_relation_list:
+            method2global_read_relation_list[item[1]].append([item[0], item[2], item[3], is_read_relation])
+        else:
+            method2global_read_relation_list[item[1]] = [[item[0], item[2], item[3], is_read_relation]]
+    is_read_relation = False
+    for item in global_written_relation_list:
+        if item[1] in method2global_read_relation_list:
+            method2global_read_relation_list[item[1]].append([item[0], item[2], item[3], is_read_relation])
+        else:
+            method2global_read_relation_list[item[1]] = [[item[0], item[2], item[3], is_read_relation]]
+    padding_of_4_space = "".join(['&nbsp;'] * 4)
+    for k, v in method2global_read_relation_list.items():
+        http_str += '<br>'
+        k_longer_key = to_longer_key(k)
+        http_str += make_link_html(k_longer_key, k_longer_key)
+        http_str += '<br>'
+        v.sort(key=lambda e: e[1])
+        for vi in v:
+            vi_long_key = to_longer_key(vi[0])
+            if vi[3]:
+                http_str += padding_of_4_space \
+                            + 's' + str(vi[1]) + ' ' \
+                            + make_link_html(vi_long_key, vi_long_key) \
+                            + ' <--- ' + request_str + ' (' + vi[2] + ')'
+            else:
+                http_str += padding_of_4_space \
+                            + 's' + str(vi[1]) + ' ' \
+                            + request_str + ' <--- ' \
+                            + make_link_html(vi_long_key, vi_long_key) + ' (' + vi[2] + ')'
+            http_str += '<br>'
+    return http_str
+
+
 if __name__ == "__main__":
-    host = get_host_ip()
 
     read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
     written_relation = pickle.load(open(written_relation_compressed_path, "rb"))
@@ -466,8 +502,8 @@ if __name__ == "__main__":
     method2relations = pickle.load(open(method2relations_compressed_path, 'rb'))
     method2global_relations = pickle.load(open(method2global_relations_compressed_path, 'rb'))
 
-    fieldKey2fieldFeatureRelationList = \
-        pickle.load(open(fieldKey2fieldFeatureRelationList_compressed_path, 'rb'))
+    fieldFeatureKey2fieldFeatureRelationList = \
+        pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))
 
     LV2relations = pickle.load(open(LV2relations_file_path, 'rb'))
     fieldkey2fieldTypekey = pickle.load(open(fieldkey2fieldTypekey_path, 'rb'))
@@ -483,21 +519,21 @@ if __name__ == "__main__":
     type2instance_for_local = pickle.load(open(type2instance_for_local_file_path, 'rb'))
     methodKey2srcLoc = pickle.load(open(methodKey2srcLoc_path, 'rb'))
     fieldKey2srcLoc = pickle.load(open(fieldKey2srcLoc_path, 'rb'))
-    fieldKey2fieldFeature = pickle.load(open(fieldKey2fieldFeature_file_path, 'rb'))
+    fieldKey2fieldFeatureCount = pickle.load(open(fieldKey2fieldFeatureCount_path, 'rb'))
     method2lv_dependency_in_dir = pickle.load(open(method2lv_dependency_in_dir_file_path, 'rb'))
     method2lv_dependency_out_dir = pickle.load(open(method2lv_dependency_out_dir_file_path, 'rb'))
 
     class2field_dependency_in_dir = pickle.load(open(class2field_dependency_in_dir_file_path, 'rb'))
     class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))
 
-    global_method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
-    global_method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
+    # global_method_dependency_in_dir = pickle.load(open(class2method_dependency_in_dir_file_path, 'rb'))
+    # global_method_dependency_out_dir = pickle.load(open(class2method_dependency_out_dir_file_path, 'rb'))
 
-    method_size_map_in = pickle.load(open(method_size_map_in_path, 'rb'))
-    method_size_map_out = pickle.load(open(method_size_map_out_path, 'rb'))
+    method_size_in = pickle.load(open(method_size_map_in_path, 'rb'))
+    method_size_out = pickle.load(open(method_size_map_out_path, 'rb'))
 
-    global_method_size_map_in = pickle.load(open(global_method_size_map_in_path, 'rb'))
-    global_method_size_map_out = pickle.load(open(global_method_size_map_out_path, 'rb'))
+    global_method_size_in = pickle.load(open(global_method_size_map_in_path, 'rb'))
+    global_method_size_out = pickle.load(open(global_method_size_map_out_path, 'rb'))
 
     class2self_responsibility_in = pickle.load(open(class2self_responsibility_in_path, 'rb'))
     class2self_responsibility_out = pickle.load(open(class2self_responsibility_out_path, 'rb'))
@@ -511,7 +547,11 @@ if __name__ == "__main__":
     method2methodFromOtherClass_in_dir = pickle.load(open(method2methodFromOtherClass_in_dir_path, 'rb'))
     method2methodFromOtherClass_out_dir = pickle.load(open(method2methodFromOtherClass_out_dir_path, 'rb'))
 
-    # method_clusters = pickle.load(open(method_clusters_path, 'rb'))
+    type_dependency_in = pickle.load(open(type_dependency_in_path, 'rb'))
+    type_dependency_out = pickle.load(open(type_dependency_out_path, 'rb'))
+
+    type_size_in = pickle.load(open(type_size_in_path, 'rb'))
+    type_size_out = pickle.load(open(type_size_out_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -520,7 +560,7 @@ if __name__ == "__main__":
     listen_socket.listen(1)
     print('Serving HTTP on host:port  ' + str(host) + ':' + str(PORT) + ' ...')
     while True:
-        all_dependency_id_list = []
+        dependency_html_util.all_id_list_for_js_variable = []
         client_connection, client_address = listen_socket.accept()
         request = client_connection.recv(1024)
         request_str = request.decode("utf-8")
@@ -529,7 +569,19 @@ if __name__ == "__main__":
         http_response = "HTTP/1.1 200 OK\r\n"
         http_response += "\r\n"
         shorter_key = to_shorter_key(request_str)
-        if request_str == "classes":
+        if request_str.startswith('classes_relation:'):
+            type_list_str = request_str[17:]
+            type_list = type_list_str.split('&')
+            http_response += "<h1>" + "classes relation" + "</h1>\n\n"
+            type_list.sort()
+            for type_key in type_list:
+                http_response += make_link_html(type_key, type_key)
+                http_response += '<br>'
+            http_response += get_dependency_in_and_out_html(
+                method2global_relations, type_list, typekey2methodkey,
+                method_size_in, method_size_out, global_method_size_in, global_method_size_out,
+                'method', 'm_id_')
+        elif request_str == "classes":
             classes_resp_in = [[i, j] for i, j in class2global_dependency_in_sum.items()]
             classes_resp_in.sort(key=lambda e: e[1], reverse=True)
             classes_resp_out = [[i, j] for i, j in class2global_dependency_out_sum.items()]
@@ -569,14 +621,16 @@ if __name__ == "__main__":
                                  + "&nbsp;:&nbsp;" \
                                  + str(class2self_responsibility_out[mk])
                 http_response += '<br>'
-        if request_str.endswith(":src"):  # 函数的源码
+        # 函数的源码
+        elif request_str.endswith(":src"):
             http_response += "<h1>" + request_str + "</h1>\n\n"
             methodkey = request_str[:-3]
             if methodkey in methodKey2srcLoc:
                 src_loc = methodKey2srcLoc[methodkey]
                 http_response += get_lines(
                     src_abs_dir + src_loc["fileName"], src_loc["startLine"], src_loc["endLine"])
-        elif request_str.endswith(":"):  # 函数的内容
+        # 函数的内容
+        elif request_str.endswith(":"):
             http_response += "<h1>" + request_str + "</h1>\n\n"
             return_type = fieldkey2fieldTypekey[request_str + "Return"]
             http_response += 'return type: <a href="http://' + host + ':8888/' + return_type + '">' \
@@ -588,9 +642,9 @@ if __name__ == "__main__":
             http_response += "<br>"
             http_response += get_parameter_and_return_html(request_str)
             # method features
-            method_features = get_method_features(shorter_key)
-            http_response += get_method_feature_html(
-                request_str, method_features)
+            if shorter_key in method2global_relations:
+                method_features = get_method_features(shorter_key)
+                http_response += get_method_feature_html(request_str, method_features)
             if shorter_key in method2relations:
                 relation_list = method2relations[shorter_key]
                 http_response += get_all_local_variable_html(relation_list)
@@ -603,7 +657,8 @@ if __name__ == "__main__":
                 relation_list = method2global_relations[shorter_key]
                 relation_list.sort(key=lambda e: e[0])
                 http_response += get_relation_without_local_html(relation_list)
-        elif request_str in LVKey2LVTypeKey:  # 局部变量的历程
+        # 局部变量的历程
+        elif request_str in LVKey2LVTypeKey:
             http_response += "<h1>" + request_str + "</h1>"
             lvType = LVKey2LVTypeKey[request_str]
             http_response += 'type: <a href="http://' + host + ':8888/' + lvType + '">' + lvType + "</a>"
@@ -621,6 +676,7 @@ if __name__ == "__main__":
                 http_response += r0 + " <--- " + r1
                 http_response += ' (' + r[2] + ')'
                 http_response += "<br><br>"
+        # method feature
         elif is_method_feature_key(request_str):
             http_response += "<h1>" + request_str + "</h1>"
             method_features = get_method_features(to_shorter_key(get_method_key_from_feature(request_str)))
@@ -633,15 +689,17 @@ if __name__ == "__main__":
                                  + make_link_html(r0long, r0long) + ' <--- ' \
                                  + make_link_html(r1long, r1long) \
                                  + '&nbsp;&nbsp;' + r[3] + '<br><br>'
-        elif shorter_key in fieldKey2fieldFeatureRelationList:
+        # field feature
+        elif request_str in fieldFeatureKey2fieldFeatureRelationList:
             http_response += "<h1>" + request_str + "</h1>"
-            relation_list = fieldKey2fieldFeatureRelationList[shorter_key]
-            relation_list.sort(key=lambda e: e[0])
-            for r in relation_list:
-                r0long = to_longer_key(r[0])
-                r1long = to_longer_key(r[1])
-                http_response += make_link_html(r0long, r0long) + ' <--- ' \
-                                 + make_link_html(r1long, r1long) + '<br><br>'
+            relation_list = fieldFeatureKey2fieldFeatureRelationList[request_str]
+            http_response += get_field_relation_html(get_field_key_from_feature(request_str), relation_list)
+            # for r in relation_list:
+            #     print(r)
+            #     r0long = to_longer_key(r[2])
+            #     r1long = to_longer_key(r[3])
+            #     http_response += make_link_html(r0long, r0long) + ' <--- ' \
+            #                      + make_link_html(r1long, r1long) + '<br><br>'
         else:
             http_response += "<h1>" + request_str + "</h1>"
             if request_str in interfaceType:
@@ -665,7 +723,64 @@ if __name__ == "__main__":
                 for st in super_types:
                     http_response += '<a href="http://' + host + ':8888/' + st + '">' + st + "</a>"
                     http_response += "<br><br>"
-            if request_str in typekey2fieldkey:  # 类的属性
+            if request_str in type_dependency_in:
+                http_response += "<h1>field types in order</h1>"
+                order_list = []
+                for tk in type_dependency_in[request_str]:
+                    in_size = type_size_in[tk] if tk in type_size_in else 1
+                    order_list.append([tk, in_size])
+                order_list.sort(key=lambda e: e[1], reverse=True)
+                for tk in order_list:
+                    in_size = tk[1]
+                    tk = tk[0]
+                    out_size = type_size_out[tk] if tk in type_size_out else 1
+                    http_response += make_link_html(tk, tk) + ' ' + \
+                                     str(in_size) + ' | ' + str(out_size)
+                    http_response += "<br>"
+            if request_str in type_dependency_in:
+                http_response += "<h1>field types out order</h1>"
+                order_list = []
+                for tk in type_dependency_in[request_str]:
+                    out_size = type_size_out[tk] if tk in type_size_out else 1
+                    order_list.append([tk, out_size])
+                order_list.sort(key=lambda e: e[1], reverse=True)
+                for tk in order_list:
+                    out_size = tk[1]
+                    tk = tk[0]
+                    in_size = type_size_in[tk] if tk in type_size_in else 1
+                    http_response += make_link_html(tk, tk) + ' ' + \
+                                     str(in_size) + ' | ' + str(out_size)
+                    http_response += "<br>"
+            if request_str in type_dependency_out:
+                http_response += "<h1>is field of types in order</h1>"
+                order_list = []
+                for tk in type_dependency_out[request_str]:
+                    in_size = type_size_in[tk] if tk in type_size_in else 1
+                    order_list.append([tk, in_size])
+                order_list.sort(key=lambda e: e[1], reverse=True)
+                for tk in order_list:
+                    in_size = tk[1]
+                    tk = tk[0]
+                    out_size = type_size_out[tk] if tk in type_size_out else 1
+                    http_response += make_link_html(tk, tk) + ' ' + \
+                                     str(in_size) + ' | ' + str(out_size)
+                    http_response += "<br>"
+            if request_str in type_dependency_out:
+                http_response += "<h1>is field of types out order</h1>"
+                order_list = []
+                for tk in type_dependency_out[request_str]:
+                    out_size = type_size_out[tk] if tk in type_size_out else 1
+                    order_list.append([tk, out_size])
+                order_list.sort(key=lambda e: e[1], reverse=True)
+                for tk in order_list:
+                    out_size = tk[1]
+                    tk = tk[0]
+                    in_size = type_size_in[tk] if tk in type_size_in else 1
+                    http_response += make_link_html(tk, tk) + ' ' + \
+                                     str(in_size) + ' | ' + str(out_size)
+                    http_response += "<br>"
+            # 类的属性 field
+            if request_str in typekey2fieldkey:
                 http_response += "<h1>" + "fields" + "</h1>"
                 field_keys = typekey2fieldkey[request_str]
                 field_keys = remove_duplicated_item_from_list_retaining_order(field_keys)
@@ -677,19 +792,25 @@ if __name__ == "__main__":
                     class2field_dependency_in_dir[request_str],
                     class2field_dependency_out_dir[request_str],
                     'field', len(request_str), 'f_id_')
-            if request_str in typekey2methodkey:  # 类的方法
+            # 类的方法
+            if request_str in typekey2methodkey:
                 http_response += "<h1>" + "methods" + "</h1>"
                 field_keys = typekey2methodkey[request_str]
                 field_keys = remove_duplicated_item_from_list_retaining_order(field_keys)
                 for fk in field_keys:
                     http_response += '<a href="http://' + host + ':8888/' + fk + '">' + fk + "</a>"
                     http_response += "<br>"
-            if request_str in global_method_dependency_in_dir:
-                http_response += get_dependency_html(
-                    global_method_dependency_in_dir[request_str],
-                    global_method_dependency_out_dir[request_str],
-                    'method', len(request_str), 'm_id_')
-            if request_str in fieldkey2fieldTypekey:  # 属性
+            if request_str in typekey2methodkey:
+                http_response += get_dependency_in_and_out_html(
+                    method2global_relations, [request_str], typekey2methodkey,
+                    method_size_in, method_size_out, global_method_size_in, global_method_size_out,
+                    'method', 'm_id_',len(request_str))
+                # get_dependency_html(
+                # global_method_dependency_in_dir[request_str],
+                # global_method_dependency_out_dir[request_str],
+                # 'method', len(request_str), 'm_id_')
+            # 属性
+            if request_str in fieldkey2fieldTypekey:
                 fieldType = fieldkey2fieldTypekey[request_str]
                 http_response += 'type: <a href="http://' + host + ':8888/' + fieldType + '">' + fieldType + "</a><br><br>"
                 if request_str in fieldKey2typeKey:
@@ -709,46 +830,15 @@ if __name__ == "__main__":
                     src_loc = fieldKey2srcLoc[request_str]
                     http_response += get_lines(
                         src_abs_dir + src_loc["fileName"], src_loc["startLine"], src_loc["endLine"])
-                if request_str in fieldKey2fieldFeature:
-                    http_response += get_field_feature_html(request_str, fieldKey2fieldFeature[request_str])
+                if request_str in fieldKey2fieldFeatureCount:
+                    http_response += get_field_feature_html(request_str, fieldKey2fieldFeatureCount[request_str])
             http_response += "<br><br>"
             if shorter_key in read_relation or shorter_key in written_relation:
                 http_response += "<h1>is read and written by:</h1>"
-                global_relation_list = read_relation[shorter_key] if shorter_key in read_relation else []
+                global_read_relation_list = read_relation[shorter_key] if shorter_key in read_relation else []
                 global_written_relation_list = written_relation[shorter_key] if shorter_key in written_relation else []
-                method2global_read_relation_list = {}
-                is_read_relation = True
-                for item in global_relation_list:
-                    if item[1] in method2global_read_relation_list:
-                        method2global_read_relation_list[item[1]].append([item[0], item[2], item[3], is_read_relation])
-                    else:
-                        method2global_read_relation_list[item[1]] = [[item[0], item[2], item[3], is_read_relation]]
-                is_read_relation = False
-                for item in global_written_relation_list:
-                    if item[1] in method2global_read_relation_list:
-                        method2global_read_relation_list[item[1]].append([item[0], item[2], item[3], is_read_relation])
-                    else:
-                        method2global_read_relation_list[item[1]] = [[item[0], item[2], item[3], is_read_relation]]
-                padding_of_4_space = "".join(['&nbsp;'] * 4)
-                for k, v in method2global_read_relation_list.items():
-                    http_response += '<br>'
-                    k_longer_key = to_longer_key(k)
-                    http_response += make_link_html(k_longer_key, k_longer_key)
-                    http_response += '<br>'
-                    v.sort(key=lambda e: e[1])
-                    for vi in v:
-                        vi_long_key = to_longer_key(vi[0])
-                        if vi[3]:
-                            http_response += padding_of_4_space \
-                                             + 's' + str(vi[1]) + ' ' \
-                                             + make_link_html(vi_long_key, vi_long_key) \
-                                             + ' <--- ' + request_str + ' (' + vi[2] + ')'
-                        else:
-                            http_response += padding_of_4_space \
-                                             + 's' + str(vi[1]) + ' ' \
-                                             + request_str + ' <--- ' \
-                                             + make_link_html(vi_long_key, vi_long_key) + ' (' + vi[2] + ')'
-                        http_response += '<br>'
+                http_response += get_field_read_and_written_relation_html(global_read_relation_list,
+                                                                          global_written_relation_list)
             if request_str in type2instance_for_field:  # 类的实例 属性
                 field_keys = type2instance_for_field[request_str]
                 instance_for_param = []

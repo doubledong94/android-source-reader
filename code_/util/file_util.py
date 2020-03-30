@@ -48,8 +48,8 @@ method2global_relations_file_path = data_abs_dir + 'method2global_relations.pkl'
 global_relations_file_path = data_abs_dir + 'global_relations.pkl'
 type2instance_for_field_file_path = data_abs_dir + 'type2instance_for_field.pkl'
 type2instance_for_local_file_path = data_abs_dir + 'type2instance_for_local.pkl'
-fieldKey2fieldFeature_file_path = data_abs_dir + 'fieldKey2fieldFeature.pkl'
-fieldKey2fieldFeatureRelationList_file_path = data_abs_dir + 'fieldKey2fieldFeatureRelationList.pkl'
+fieldKey2fieldFeatureCount_path = data_abs_dir + 'fieldKey2fieldFeature.pkl'
+fieldFeatureKey2fieldFeatureRelationList_file_path = data_abs_dir + 'fieldKey2fieldFeatureRelationList.pkl'
 feature_key2methodKeys_file_path = data_abs_dir + 'feature_key2methodKeys.pkl'
 feature_key2fieldKeys_file_path = data_abs_dir + 'feature_key2fieldKeys.pkl'
 
@@ -83,6 +83,11 @@ class2self_dependency_out_sum_path = data_abs_dir + 'class2self_dependency_out_s
 class2global_dependency_in_sum_path = data_abs_dir + 'class2global_dependency_in_sum.pkl'
 class2global_dependency_out_sum_path = data_abs_dir + 'class2global_dependency_out_sum.pkl'
 
+type_dependency_in_path = data_abs_dir + 'type_dependency_in.pkl'
+type_dependency_out_path = data_abs_dir + 'type_dependency_out.pkl'
+type_size_in_path = data_abs_dir + 'type_size_in.pkl'
+type_size_out_path = data_abs_dir + 'type_size_out.pkl'
+
 long_key2shorter_key_dict_path = compressed_data_abs_dir + 'long_key2shorter_key_dict.pkl'
 long_key2shorter_key_dict_reverse_path = compressed_data_abs_dir + 'long_key2shorter_key_dict_reverse.pkl'
 
@@ -99,7 +104,7 @@ def get_method_clusters_path(i):
     return data_abs_dir + 'method_clusters' + str(i) + '.pkl'
 
 
-fieldKey2fieldFeatureRelationList_compressed_path = \
+fieldFeatureKey2fieldFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'fieldKey2fieldFeatureRelationList_compressed.pkl'
 
 
