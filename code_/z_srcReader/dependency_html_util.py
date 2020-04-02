@@ -44,7 +44,8 @@ dependency_colors = ['#f5b7b1', '#d2b4de', '#a9cce3', '#abebc6', '#f9e79f', '#f5
 
 def recur_for_dependency(
         key, id_list, super_list, dependency_dict, dependency_from_other_class_dict,
-        size_in, size_out, global_size_in, global_size_out, size_for_sorting, omit_len=0):
+        size_in, size_out, global_size_in, global_size_out, size_for_sorting, omit_len=0, search_key=''):
+    searched_flag = search_key == '' or search_key == key
     depth = len(super_list)
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
@@ -56,7 +57,7 @@ def recur_for_dependency(
     if key in global_size_in or key in global_size_out:
         method_size = get_size_string(key, size_in, size_out, global_size_in, global_size_out)
     else:
-        return ""
+        return '', searched_flag
     html_str = '<text ' + display_style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
                + padding + make_colored_text_html(key[omit_len:],
                                                   dependency_colors[depth]) + method_size + "<br></text>"
@@ -73,10 +74,12 @@ def recur_for_dependency(
                 super_list_copy = super_list.copy()
                 id_list_copy.append(str(id_count))
                 super_list_copy.append(key)
-                html_str += recur_for_dependency(
+                recur_html, child_searched_flag = recur_for_dependency(
                     child_node, id_list_copy, super_list_copy, dependency_dict, dependency_from_other_class_dict,
-                    size_in, size_out, global_size_in, global_size_out, size_for_sorting, omit_len)
-    if depth < 7 and key in dependency_from_other_class_dict and len(dependency_from_other_class_dict[key]) > 0:
+                    size_in, size_out, global_size_in, global_size_out, size_for_sorting, omit_len, search_key)
+                searched_flag = searched_flag or child_searched_flag
+                html_str += recur_html
+    if depth < 5 and key in dependency_from_other_class_dict and len(dependency_from_other_class_dict[key]) > 0:
         from_other_class = ":from_other_class"
         depth += 1
         padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
@@ -92,6 +95,7 @@ def recur_for_dependency(
             other_method_count += 1
             other_id = id + ":" + str(other_method_count)
             all_id_list_for_js_variable.append(other_id)
+            searched_flag = searched_flag or search_key == key_from_other_class
             if key_from_other_class in size_in or key_from_other_class in size_out:
                 method_size = get_size_string(
                     key_from_other_class, size_in, size_out, global_size_in, global_size_out)
@@ -99,12 +103,17 @@ def recur_for_dependency(
                         + other_id + '\')" id=' + other_id + '>' + padding + \
                         make_colored_text_html(key_from_other_class, dependency_colors[depth]) \
                         + method_size + "<br></text>"
-    return html_str
+    return html_str, searched_flag
 
 
 def is_in_type_list(key, type_key_scope_list):
+    sects = key.split(':')
+    key = sects[0]
+    sects = key.split('.')
+    sects = sects[0:-1]
+    key = '.'.join(sects)
     for type_key in type_key_scope_list:
-        if key.startswith(type_key):
+        if key == type_key:
             return True
     return False
 
@@ -157,9 +166,12 @@ def merge_list(list_list):
 def get_dependency_in_and_out_html(
         method2global_relation, type_key_scope_list, typ_key2method_key_list,
         size_in, size_out, global_size_in, global_size_out,
-        id_shown_str, id_index_head,omit_len=0):
+        id_shown_str, id_index_head, omit_len=0, search_method_key=''):
     all_key = merge_list([typ_key2method_key_list[k] for k in type_key_scope_list])
-    print(len(all_key))
+    all_key_count = len(all_key)
+    if all_key_count > 2000:
+        return str(all_key_count) + 'methods, too many to show'
+    print(all_key_count)
     dependency_in = {}
     dependency_out = {}
     dependency_in_from_other_class = {}
@@ -190,16 +202,19 @@ def get_dependency_in_and_out_html(
     intersect = list(set.intersection(set(out_zero_key_list), set(in_zero_key_list)))
     out_zero_key_list = sort_dependency_by_method_size(out_zero_key_list, global_size_in)
     in_zero_key_list = sort_dependency_by_method_size(in_zero_key_list, global_size_out)
+    # print(out_zero_key_list)
+    # print(in_zero_key_list)
     id_count = 0
     html_str = '<h1>' + id_shown_str + ' dependency in:</h1>'
     for key in out_zero_key_list:
         if key in intersect:
             continue
         id_count += 1
-        dependency_str = recur_for_dependency(key, [id_index_head + str(id_count)], [], dependency_in,
-                                              dependency_in_from_other_class, size_in, size_out, global_size_in,
-                                              global_size_out, global_size_in,omit_len)
-        if not dependency_str == "":
+        dependency_str, searched_flag = recur_for_dependency(
+            key, [id_index_head + str(id_count)], [], dependency_in,
+            dependency_in_from_other_class, size_in, size_out, global_size_in,
+            global_size_out, global_size_in, omit_len, search_method_key)
+        if not dependency_str == "" and searched_flag:
             html_str += dependency_str
             html_str += '<br>'
     html_str += '<h1>' + id_shown_str + ' dependency out:</h1>'
@@ -207,10 +222,11 @@ def get_dependency_in_and_out_html(
         if key in intersect:
             continue
         id_count += 1
-        dependency_str = recur_for_dependency(key, [id_index_head + str(id_count)], [], dependency_out,
-                                              dependency_out_from_other_class, size_in, size_out, global_size_in,
-                                              global_size_out, global_size_out,omit_len)
-        if not dependency_str == "":
+        dependency_str, searched_flag = recur_for_dependency(
+            key, [id_index_head + str(id_count)], [], dependency_out,
+            dependency_out_from_other_class, size_in, size_out, global_size_in,
+            global_size_out, global_size_out, omit_len, search_method_key)
+        if not dependency_str == "" and searched_flag:
             html_str += dependency_str
             html_str += '<br>'
     html_str += '<h1>' + id_shown_str + ' not involved in:</h1>'
@@ -218,10 +234,11 @@ def get_dependency_in_and_out_html(
     for k in all_key:
         if k in intersect or (k not in dependency_in and k not in dependency_out):
             id_count += 1
-            dependency_str = recur_for_dependency(k, [id_index_head + str(id_count)], [], dependency_in,
-                                                  dependency_in_from_other_class, size_in, size_out, global_size_in,
-                                                  global_size_out, global_size_in, omit_len)
-            if not dependency_str == "":
+            dependency_str, searched_flag = recur_for_dependency(
+                k, [id_index_head + str(id_count)], [], dependency_in,
+                dependency_in_from_other_class, size_in, size_out, global_size_in,
+                global_size_out, global_size_in, omit_len, search_method_key)
+            if not dependency_str == "" and searched_flag:
                 html_str += dependency_str
                 html_str += '<br>'
     html_str += '<h1>' + id_shown_str + ' not involved out:</h1>'
@@ -229,10 +246,11 @@ def get_dependency_in_and_out_html(
     for k in all_key:
         if k in intersect or (k not in dependency_in and k not in dependency_out):
             id_count += 1
-            dependency_str = recur_for_dependency(k, [id_index_head + str(id_count)], [], dependency_out,
-                                                  dependency_out_from_other_class, size_in, size_out, global_size_in,
-                                                  global_size_out, global_size_out, omit_len)
-            if not dependency_str == "":
+            dependency_str, searched_flag = recur_for_dependency(
+                k, [id_index_head + str(id_count)], [], dependency_out,
+                dependency_out_from_other_class, size_in, size_out, global_size_in,
+                global_size_out, global_size_out, omit_len, search_method_key)
+            if not dependency_str == "" and searched_flag:
                 html_str += dependency_str
                 html_str += '<br>'
     return html_str

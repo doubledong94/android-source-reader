@@ -27,8 +27,7 @@ from code_.util.key_util import get_method_feature_key, is_parameter_key, is_ret
 from code_.y_data_compression_and_decompression.b_key_conversion import decompress_by_replace, to_shorter_key, \
     to_longer_key
 from code_.z_srcReader import dependency_html_util
-from code_.z_srcReader.dependency_html_util import get_size_string, get_dependency_in_and_out_html, \
-    all_id_list_for_js_variable
+from code_.z_srcReader.dependency_html_util import get_size_string, get_dependency_in_and_out_html
 from code_.z_srcReader.html_util import host
 
 method_key2method_features = {}
@@ -569,7 +568,55 @@ if __name__ == "__main__":
         http_response = "HTTP/1.1 200 OK\r\n"
         http_response += "\r\n"
         shorter_key = to_shorter_key(request_str)
-        if request_str.startswith('classes_relation:'):
+        if request_str.startswith('package_classes_relation:'):
+            # package_classes_relation:package&package:class&package:class,class,class@methodkey
+            package_and_searching_method = request_str[25:].split('@')
+            package_and_classes_list = package_and_searching_method[0].split('&')
+            type_list = []
+            starts_with_str = []
+            for package_and_classes in package_and_classes_list:
+                package_and_classes = package_and_classes.split(':')
+                package_str = package_and_classes[0]
+                if len(package_and_classes) > 1:
+                    classes_str = package_and_classes[1].split(',')
+                    for class_str in classes_str:
+                        starts_with_str.append(package_str + '.' + class_str + '.')
+                        type_list.append(package_str + '.' + class_str)
+                else:
+                    starts_with_str.append(package_str)
+            for k, v in typekey2fieldkey.items():
+                for s in starts_with_str:
+                    if k.startswith(s):
+                        type_list.append(k)
+            http_response += "<h1>" + "package classes relation" + "</h1>\n\n"
+            type_list.sort()
+            for type_key in type_list:
+                http_response += make_link_html(type_key, type_key)
+                http_response += '<br>'
+            search_method_key = ''
+            if len(package_and_searching_method) > 1:
+                search_method_key = package_and_searching_method[1]
+            print('search method key :' + search_method_key)
+            http_response += get_dependency_in_and_out_html(
+                method2global_relations, type_list, typekey2methodkey,
+                method_size_in, method_size_out, global_method_size_in, global_method_size_out,
+                'method', 'm_id_', search_method_key=search_method_key)
+        elif request_str.startswith('package:'):
+            type_list = []
+            package_str = request_str[8:]
+            for k, v in typekey2fieldkey.items():
+                if k.startswith(package_str):
+                    type_list.append(k)
+            http_response += "<h1>" + "classes relation" + "</h1>\n\n"
+            type_list.sort()
+            for type_key in type_list:
+                http_response += make_link_html(type_key, type_key)
+                http_response += '<br>'
+            http_response += get_dependency_in_and_out_html(
+                method2global_relations, type_list, typekey2methodkey,
+                method_size_in, method_size_out, global_method_size_in, global_method_size_out,
+                'method', 'm_id_')
+        elif request_str.startswith('classes_relation:'):
             type_list_str = request_str[17:]
             type_list = type_list_str.split('&')
             http_response += "<h1>" + "classes relation" + "</h1>\n\n"
@@ -804,7 +851,7 @@ if __name__ == "__main__":
                 http_response += get_dependency_in_and_out_html(
                     method2global_relations, [request_str], typekey2methodkey,
                     method_size_in, method_size_out, global_method_size_in, global_method_size_out,
-                    'method', 'm_id_',len(request_str))
+                    'method', 'm_id_', len(request_str))
                 # get_dependency_html(
                 # global_method_dependency_in_dir[request_str],
                 # global_method_dependency_out_dir[request_str],
