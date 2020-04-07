@@ -68,6 +68,9 @@ method2methodFromOtherClass_out_dir_path = data_abs_dir + 'method2methodFromOthe
 global_method_dependency_in_dir_path = data_abs_dir + 'global_method_dependency_in_dir.pkl'
 global_method_dependency_out_dir_path = data_abs_dir + 'global_method_dependency_out_dir.pkl'
 
+global_field_consumption_dependency_in_dir_path = data_abs_dir + 'global_field_consumption_dependency_in_dir.pkl'
+global_field_consumption_dependency_out_dir_path = data_abs_dir + 'global_field_consumption_dependency_out_dir.pkl'
+
 method_size_map_in_path = data_abs_dir + 'method_size_map_in.pkl'
 method_size_map_out_path = data_abs_dir + 'method_size_map_out.pkl'
 
@@ -108,6 +111,24 @@ fieldFeatureKey2fieldFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'fieldKey2fieldFeatureRelationList_compressed.pkl'
 
 
+def get_file_into_html(file_path):
+    f = open(file_path)
+    ret_str = ''
+    line_count = 0
+    for line in f:
+        line_count += 1
+        ret_str += line
+    f.close()
+    ret_str = ret_str.replace('<', '&lt;')
+    ret_str = ret_str.replace('>', '&gt;')
+    ret_str = ret_str.replace('<=', '&le;')
+    ret_str = ret_str.replace('>=', '&ge;')
+    ret_str = ret_str.replace('\n', '<br>')
+    ret_str = ret_str.replace('\t', '    ')
+    ret_str = ret_str.replace(' ', '&nbsp;')
+    return ret_str
+
+
 def get_lines(file_path, start_line, end_line):
     f = open(file_path)
     ret_str = ''
@@ -116,7 +137,6 @@ def get_lines(file_path, start_line, end_line):
         line_count += 1
         if start_line <= line_count <= end_line:
             ret_str += line
-
     f.close()
     ret_str = ret_str.replace('<', '&lt;')
     ret_str = ret_str.replace('>', '&gt;')
