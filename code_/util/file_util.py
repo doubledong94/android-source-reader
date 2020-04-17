@@ -46,6 +46,8 @@ method2relations_file_path = data_abs_dir + 'method2relations.pkl'
 LV2relations_file_path = data_abs_dir + 'LV2relations.pkl'
 method2global_relations_file_path = data_abs_dir + 'method2global_relations.pkl'
 global_relations_file_path = data_abs_dir + 'global_relations.pkl'
+method2dependency_in_inside_method_path = data_abs_dir + 'method2dependency_in_inside_method.pkl'
+method2dependency_out_inside_method_path = data_abs_dir + 'method2dependency_out_inside_method.pkl'
 type2instance_for_field_file_path = data_abs_dir + 'type2instance_for_field.pkl'
 type2instance_for_local_file_path = data_abs_dir + 'type2instance_for_local.pkl'
 fieldKey2fieldFeatureCount_path = data_abs_dir + 'fieldKey2fieldFeature.pkl'
@@ -109,6 +111,12 @@ def get_method_clusters_path(i):
 
 fieldFeatureKey2fieldFeatureRelationList_compressed_path = \
     compressed_data_abs_dir + 'fieldKey2fieldFeatureRelationList_compressed.pkl'
+
+method2dependency_in_inside_method_compressed_path = \
+    compressed_data_abs_dir + 'method2dependency_in_inside_method_compressed.pkl'
+
+method2dependency_out_inside_method_compressed_path = \
+    compressed_data_abs_dir + 'method2dependency_out_inside_method_compressed.pkl'
 
 
 def get_file_into_html(file_path):

@@ -49,7 +49,7 @@ from code_.util.key_util import is_return_key, is_condition_key, is_parameter_ke
 # 37: parameter     =local
 # 38: parameter     =field
 # 39: parameter     =methodCall
-from code_.y_data_compression_and_decompression.b_key_conversion import to_longer_key
+from code_.util.key_conversion_util import to_longer_key_if_compressed
 
 method_feature_len = 40
 
@@ -58,10 +58,10 @@ def get_method_feature_relation_list(method_key, method_relation_list):
     featured_relation_list = []
     for i in range(method_feature_len):
         featured_relation_list.append([])
-    method_key = to_longer_key(method_key)
+    method_key = to_longer_key_if_compressed(method_key)
     for r in method_relation_list:
-        written_key = to_longer_key(r[0])
-        read_key = to_longer_key(r[1])
+        written_key = to_longer_key_if_compressed(r[0])
+        read_key = to_longer_key_if_compressed(r[1])
         if is_return_key(written_key):
             if is_parameter_key(read_key):
                 index = 0

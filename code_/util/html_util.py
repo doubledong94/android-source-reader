@@ -14,3 +14,10 @@ host = get_host_ip()
 
 def make_link_html(text, link):
     return '<a href="http://' + host + ':8888/' + link + '">' + text + "</a>"
+
+
+def make_h1_html(text, id_=''):
+    id_str = ''
+    if id_:
+        id_str = 'id="' + str(id_) + '"'
+    return '<h1 ' + id_str + '>' + text + "</h1>"

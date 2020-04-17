@@ -61,35 +61,39 @@ def get_field_feature_key(field_key, i):
     return field_key + "-Feature" + str(i)
 
 
+def is_field_feature_key(key):
+    pos = key.rfind("-")
+    if pos == -1:
+        return False
+    return key[pos:].startswith("-Feature")
+
+
 def get_method_key_from_parameter_key(parameter_key):
-    if len(parameter_key) > 12:
-        mk = parameter_key[0:-10]
-        if not mk.endswith(':'):
-            mk = mk[0:-1]
-        return mk
-    else:
-        return ''
+    return return_to_method_key(parameter_key)
+
+
+def get_method_key_from_condition_key(condition_key):
+    return return_to_method_key(condition_key)
 
 
 def get_method_key_from_return_key(return_key):
-    if len(return_key) > 7:
-        return return_key[0:-6]
-    else:
-        return ''
+    return return_to_method_key(return_key)
 
 
 def get_key_from_reference(reference_key):
-    k = reference_key[0:-9]
-    if not k.endswith(':'):
-        k = k[0:-1]
-    return k
+    return return_to_method_key(reference_key)
+
+
+def get_field_key_from_reference(reference_key):
+    pos = reference_key.rfind('-')
+    return reference_key[:pos]
 
 
 def is_method_feature_key(key):
-    for i in range(40):
-        if key.endswith(":Feature" + str(i)):
-            return True
-    return False
+    pos = key.rfind(":")
+    if pos == -1:
+        return False
+    return key[pos:].startswith(":Feature")
 
 
 def get_method_feature_index(feature_key):
@@ -113,8 +117,13 @@ def get_field_key_from_feature(feature_key):
         return feature_key[0:-10]
 
 
-def is_field_feature_key(key):
-    for i in range(40):
-        if key.endswith("-Feature" + str(i)):
-            return True
-    return False
+def return_to_method_key(special_method_key):
+    pos = special_method_key.rfind(':')
+    if pos == -1:
+        return ""
+    else:
+        return special_method_key[:pos + 1]
+
+
+def get_key_from_dependency_inside_method_key(key):
+    return key[key.find(' ') + 1:key.rfind(' ')]
