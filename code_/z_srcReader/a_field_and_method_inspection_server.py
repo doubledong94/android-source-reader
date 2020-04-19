@@ -32,11 +32,12 @@ from code_.util.key_util import get_method_feature_key, is_parameter_key, is_ret
     get_method_key_from_parameter_key, is_method_feature_key, get_method_feature_index, get_method_key_from_feature, \
     get_field_feature_key, get_field_key_from_feature, is_condition_key, is_reference_key, is_lv_key, is_field_key, \
     is_field_reference_key, get_key_from_dependency_inside_method_key
-from code_.z_srcReader import dependency_html_util
+from code_.z_srcReader import method_usage_html_util
 from code_.z_srcReader.big_method_separation_util import separation
-from code_.z_srcReader.dependency_html_util import get_size_string, get_dependency_in_and_out_html, \
+from code_.z_srcReader.method_usage_html_util import get_size_string, get_dependency_in_and_out_html, \
     dependency_colors, get_zero_degree, recur_for_dependency_inside_method
-from code_.z_srcReader.field_consumption_html_util import get_field_consumption_html_in_and_out
+from code_.z_srcReader.field_usage_html_util import get_field_usage_html
+from code_.z_srcReader.parameter_usage_html_util import get_parameter_consumption_html_in_and_out
 
 method_key2method_features = {}
 
@@ -187,7 +188,7 @@ def sort_dependency_by_method_size(dependency_list, method_size_map):
 def recur_for_dependency(lv, lv_dependency_in_dir, depth, super_list, type_key_len, id_list, method_size_map,
                          method_size_map_for_sorting, method2method_from_other_class):
     global method_size_in, method_size_out
-    all_dependency_id_list = dependency_html_util.all_id_list_for_js_variable
+    all_dependency_id_list = method_usage_html_util.all_id_list_for_js_variable
     # html_str = '|'.join([' '.join(['&nbsp;'] * 2)] * depth) + make_link_html(lv, lv) + "<br>"
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
@@ -500,7 +501,7 @@ def convert_python_list2js_list(var_name, python_list):
 
 def get_js_code_str():
     print('get_js_code_str')
-    all_dependency_id_list = dependency_html_util.all_id_list_for_js_variable
+    all_dependency_id_list = method_usage_html_util.all_id_list_for_js_variable
     id_list_js_define_str = convert_python_list2js_list('id_list', all_dependency_id_list)
     js_str = "<script>"
     js_str += 'function dependency_click(id){' \
@@ -733,7 +734,7 @@ if __name__ == "__main__":
     listen_socket.listen(1)
     print('Serving HTTP on host:port  ' + str(host) + ':' + str(PORT) + ' ...')
     while True:
-        dependency_html_util.all_id_list_for_js_variable.clear()
+        method_usage_html_util.all_id_list_for_js_variable.clear()
         client_connection, client_address = listen_socket.accept()
         request = client_connection.recv(1024)
         request_str = request.decode("utf-8")
@@ -743,8 +744,45 @@ if __name__ == "__main__":
         http_response += "\r\n"
         try:
             shorter_key = to_shorter_key_if_compressed(request_str)
-            if request_str.startswith('parameter_generation_consumption:'):
-                package_and_searching_method = request_str[33:].split('@')
+            if request_str.startswith('field_usage:'):  # 属性在几个类中的使用
+                # field_usage:package&package:class&package:class,class,class@fieldKey,fieldKey
+                package_and_searching_method_and_field = request_str[12:].split('@')
+                package_and_classes_list = package_and_searching_method_and_field[0].split('&')
+                print(package_and_searching_method_and_field)
+                type_list = []
+                starts_with_str = []
+                for package_and_classes in package_and_classes_list:
+                    package_and_classes = package_and_classes.split(':')
+                    package_str = package_and_classes[0]
+                    if len(package_and_classes) > 1:
+                        classes_str = package_and_classes[1].split(',')
+                        for class_str in classes_str:
+                            starts_with_str.append(package_str + '.' + class_str + '.')
+                            type_list.append(package_str + '.' + class_str)
+                    else:
+                        starts_with_str.append(package_str)
+                for k, v in typekey2fieldkey.items():
+                    for s in starts_with_str:
+                        if k.startswith(s):
+                            type_list.append(k)
+
+                type_list.sort()
+                http_response += make_h1_html("field usage")
+                for type_key in type_list:
+                    http_response += make_link_html(type_key, type_key)
+                    http_response += '<br>'
+                search_field_keys = package_and_searching_method_and_field[1].split(',')
+                print('search field keys :' + '\n'.join(search_field_keys))
+                http_response += get_field_usage_html(
+                    type_list, typekey2methodkey,
+                    method2global_relations, global_method_size_in, 'field usage', 'fu',
+                    search_field_keys, read_relation, written_relation,
+                    method2dependency_in_inside_method, method2dependency_out_inside_method)
+
+            elif request_str.startswith('parameter_usage:'):
+                # 参数在几个类中的传递，来源和使用
+                # parameter_usage:package&package:class&package:class,class,class@parameterKey
+                package_and_searching_method = request_str[16:].split('@')
                 package_and_classes_list = package_and_searching_method[0].split('&')
                 type_list = []
                 starts_with_str = []
@@ -762,7 +800,7 @@ if __name__ == "__main__":
                     for s in starts_with_str:
                         if k.startswith(s):
                             type_list.append(k)
-                http_response += make_h1_html("parameter generation and consumption")
+                http_response += make_h1_html("parameter usage")
                 type_list.sort()
                 for type_key in type_list:
                     http_response += make_link_html(type_key, type_key)
@@ -770,13 +808,14 @@ if __name__ == "__main__":
                 search_method_key = ''
                 if len(package_and_searching_method) > 1:
                     search_method_key = package_and_searching_method[1]
-                print('search field key :' + search_method_key)
-                http_response += get_field_consumption_html_in_and_out(
+                print('search method key :' + search_method_key)
+                http_response += get_parameter_consumption_html_in_and_out(
                     field_consumption_dependency_in_dir, field_consumption_dependency_out_dir,
                     type_list, fieldkey2fieldTypekey.keys(), 'field', 'f_gc_id', search_method_key)
-            elif request_str.startswith('package_classes_relation:'):
+            elif request_str.startswith('method_usage:'):
+                # 函数在几个类中的调用与被调用
                 # package_classes_relation:package&package:class&package:class,class,class@methodkey
-                package_and_searching_method = request_str[25:].split('@')
+                package_and_searching_method = request_str[13:].split('@')
                 package_and_classes_list = package_and_searching_method[0].split('&')
                 type_list = []
                 starts_with_str = []
@@ -794,7 +833,7 @@ if __name__ == "__main__":
                     for s in starts_with_str:
                         if k.startswith(s):
                             type_list.append(k)
-                http_response += make_h1_html("package classes relation")
+                http_response += make_h1_html("method usage")
                 type_list.sort()
                 for type_key in type_list:
                     http_response += make_link_html(type_key, type_key)
@@ -808,34 +847,8 @@ if __name__ == "__main__":
                     method_size_in, method_size_out, global_method_size_in, global_method_size_out,
                     'method', 'm_id_', search_method_key=search_method_key)
                 print('done join html')
-            elif request_str.startswith('package:'):
-                type_list = []
-                package_str = request_str[8:]
-                for k, v in typekey2fieldkey.items():
-                    if k.startswith(package_str):
-                        type_list.append(k)
-                http_response += make_h1_html("classes relation")
-                type_list.sort()
-                for type_key in type_list:
-                    http_response += make_link_html(type_key, type_key)
-                    http_response += '<br>'
-                http_response += get_dependency_in_and_out_html(
-                    method2global_relations, type_list, typekey2methodkey,
-                    method_size_in, method_size_out, global_method_size_in, global_method_size_out,
-                    'method', 'm_id_')
-            elif request_str.startswith('classes_relation:'):
-                type_list_str = request_str[17:]
-                type_list = type_list_str.split('&')
-                http_response += make_h1_html("classes relation")
-                type_list.sort()
-                for type_key in type_list:
-                    http_response += make_link_html(type_key, type_key)
-                    http_response += '<br>'
-                http_response += get_dependency_in_and_out_html(
-                    method2global_relations, type_list, typekey2methodkey,
-                    method_size_in, method_size_out, global_method_size_in, global_method_size_out,
-                    'method', 'm_id_')
-            elif request_str.startswith("classes"):
+            elif request_str.startswith("classes"):  # 查看包中的类
+                # classes@package
                 classes_finding_str = request_str.split('@')
                 if len(classes_finding_str) > 1:
                     classes_finding_str = classes_finding_str[1]
@@ -946,8 +959,8 @@ if __name__ == "__main__":
                     relation_list = method2global_relations[shorter_key]
                     relation_list.sort(key=lambda e: e[2])
                     http_response += get_relation_without_local_html(relation_list, local_node2node)
-                if shorter_key in method2relations:
-                    http_response += get_relation_with_local_html(method2relations[shorter_key])
+                # if shorter_key in method2relations:
+                #     http_response += get_relation_with_local_html(method2relations[shorter_key])
             # 局部变量的历程
             elif request_str in LVKey2LVTypeKey:
                 http_response += make_h1_html(request_str)

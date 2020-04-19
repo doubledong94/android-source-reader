@@ -49,7 +49,7 @@ done_color = '#5555ff'
 
 def recur_for_dependency(
         key, id_list, super_list, dependency_dict, dependency_from_other_class_dict,
-        dependency_dict_p, dependency_from_other_class_dict_p, parallel_key,
+        dependency_dict_pk, dependency_from_other_class_dict_pk, parallel_key,
         size_in, size_out, global_size_in, global_size_out, omit_len=0, search_key=''):
     searched_flag = search_key == '' or search_key == key
     depth = len(super_list)
@@ -79,18 +79,18 @@ def recur_for_dependency(
     if not is_recurred:
         if key in dependency_dict:
             dependency_in_dir_list = dependency_dict[key]
-            dependency_in_dir_list = sort_dependency_by_method_size(dependency_in_dir_list,
-                                                                    dependency_dict_p[key], False)
+            dependency_in_dir_list = sort_dependency_by_method_size(
+                dependency_in_dir_list,dependency_dict_pk[key], False)
             for child_node in dependency_in_dir_list:
                 id_count += 1
                 id_list_copy = id_list.copy()
                 super_list_copy = super_list.copy()
                 id_list_copy.append(str(id_count))
-                parallel_key = "&nbsp;&nbsp;" + dependency_dict_p[key][child_node]
+                sub_parallel_key = "&nbsp;&nbsp;" + dependency_dict_pk[key][child_node]
                 super_list_copy.append(key)
                 recur_html, child_searched_flag = recur_for_dependency(
                     child_node, id_list_copy, super_list_copy, dependency_dict, dependency_from_other_class_dict,
-                    dependency_dict_p, dependency_from_other_class_dict_p, parallel_key,
+                    dependency_dict_pk, dependency_from_other_class_dict_pk, sub_parallel_key,
                     size_in, size_out, global_size_in, global_size_out, omit_len, search_key)
                 searched_flag = searched_flag or child_searched_flag
                 sub_str_list.extend(recur_html)
@@ -110,13 +110,13 @@ def recur_for_dependency(
         other_method_count = 0
         other_class_dict_keys = dependency_from_other_class_dict[key]
         other_class_dict_keys = sort_dependency_by_method_size(other_class_dict_keys,
-                                                               dependency_from_other_class_dict_p[key], False)
+                                                               dependency_from_other_class_dict_pk[key], False)
         for key_from_other_class in other_class_dict_keys:
             other_method_count += 1
             other_id = id + ":" + str(other_method_count)
             all_id_list_for_js_variable.append(other_id)
             searched_flag = searched_flag or search_key == key_from_other_class
-            parallel_key = "&nbsp;&nbsp;" + dependency_from_other_class_dict_p[key][key_from_other_class]
+            parallel_key = "&nbsp;&nbsp;" + dependency_from_other_class_dict_pk[key][key_from_other_class]
             if key_from_other_class in size_in or key_from_other_class in size_out:
                 method_size = get_size_string(
                     key_from_other_class, size_in, size_out, global_size_in, global_size_out)
@@ -353,7 +353,7 @@ def get_dependency_in_and_out_html(
     return ''.join(html_str_list)
 
 
-def recur_for_dependency_inside_method(key, id_list, super_list, dependency_dict):
+def recur_for_dependency_inside_method(key, id_list, super_list, dependency_dict, search_field_list=[]):
     depth = len(super_list)
     is_recurred = key in super_list
     back_color = recur_back_color if is_recurred else dependency_colors[depth]

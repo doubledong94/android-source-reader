@@ -1,6 +1,8 @@
 from code_.util.dict_util import merge_dict_with_value_merged
-from code_.z_srcReader.dependency_html_util import get_zero_degree, all_id_list_for_js_variable, \
+from code_.z_srcReader.method_usage_html_util import get_zero_degree, all_id_list_for_js_variable, \
     dependency_colors, make_colored_text_html
+
+done_key = {}
 
 
 def recur_for_dependency(
@@ -13,8 +15,11 @@ def recur_for_dependency(
     display_style_str = ""
     if len(super_list) > 0:
         display_style_str = 'style="display:none"'
-    html_str = '<text ' + display_style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
-               + padding + make_colored_text_html(key, dependency_colors[depth]) + "<br></text>"
+    html_str_list = ['<text ' + display_style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+                     + padding + make_colored_text_html(key, dependency_colors[depth]) + "<br></text>"]
+    if key in done_key:
+        return html_str_list, searched_flag
+    done_key[key] = ''
     id_count = 0
     if key not in super_list:
         if key in dependency_dict:
@@ -29,16 +34,18 @@ def recur_for_dependency(
                     child_node, id_list_copy, super_list_copy, dependency_dict,
                     dependency_from_other_class_dict, search_key)
                 searched_flag = searched_flag or child_searched_flag
-                html_str += recur_html
-    if key not in super_list and key in dependency_from_other_class_dict and len(dependency_from_other_class_dict[key]) > 0:
+                html_str_list.extend(recur_html)
+    if key not in super_list and key in dependency_from_other_class_dict and len(
+            dependency_from_other_class_dict[key]) > 0:
         from_other_class = ":from_other_class"
         depth += 1
         padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
         id += from_other_class
         all_id_list_for_js_variable.append(id)
-        html_str += '<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
-                    + padding + make_colored_text_html(from_other_class, dependency_colors[depth]) \
-                    + "<br></text>"
+        html_str_list.append(
+            '<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+            + padding + make_colored_text_html(from_other_class, dependency_colors[depth]) \
+            + "<br></text>")
         depth += 1
         padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
         other_method_count = 0
@@ -47,14 +54,14 @@ def recur_for_dependency(
             other_id = id + ":" + str(other_method_count)
             all_id_list_for_js_variable.append(other_id)
             searched_flag = searched_flag or search_key == key_from_other_class
-            html_str += '<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' \
-                        + other_id + '\')" id=' + other_id + '>' + padding + \
-                        make_colored_text_html(key_from_other_class, dependency_colors[depth]) \
-                        + "<br></text>"
-    return html_str, searched_flag
+            html_str_list.append('<text ' + 'style="display:none"' + ' onclick="dependency_click(\'' \
+                                 + other_id + '\')" id=' + other_id + '>' + padding + \
+                                 make_colored_text_html(key_from_other_class, dependency_colors[depth]) \
+                                 + "<br></text>")
+    return html_str_list, searched_flag
 
 
-def get_field_consumption_html_in_and_out(
+def get_parameter_consumption_html_in_and_out(
         field_consumption_dependency_in_dir, field_consumption_dependency_out_dir,
         type_key_scope_list, all_field_key, id_shown_str, id_index_head, search_field_key=''):
     all_key = []
@@ -89,46 +96,50 @@ def get_field_consumption_html_in_and_out(
     out_zero_key_list = get_zero_degree(all_key, dependency_out)
     intersect = list(set.intersection(set(out_zero_key_list), set(in_zero_key_list)))
     id_count = 0
-    html_str = '<h1>' + id_shown_str + ' come from:</h1>'
+    html_str_list = ['<h1>' + id_shown_str + ' come from:</h1>']
     for k in out_zero_key_list:
         if k in intersect:
             continue
         id_count += 1
+        done_key.clear()
         dependency_str, searched_flag = recur_for_dependency(
             k, [id_index_head + str(id_count)], [], dependency_in,
             dependency_in_from_other_class, search_field_key)
-        if not dependency_str == "" and searched_flag:
-            html_str += dependency_str
-            html_str += '<br>'
-    html_str += '<h1>' + id_shown_str + ' come to:</h1>'
+        if len(dependency_str) > 0 and searched_flag:
+            html_str_list.extend(dependency_str)
+            html_str_list.append('<br>')
+    html_str_list.append('<h1>' + id_shown_str + ' come to:</h1>')
     for key in in_zero_key_list:
         if key in intersect:
             continue
         id_count += 1
+        done_key.clear()
         dependency_str, searched_flag = recur_for_dependency(
             key, [id_index_head + str(id_count)], [], dependency_out,
             dependency_out_from_other_class, search_field_key)
-        if not dependency_str == "" and searched_flag:
-            html_str += dependency_str
-            html_str += '<br>'
-    html_str += '<h1>' + id_shown_str + ' not involved in:</h1>'
+        if len(dependency_str) > 0 and searched_flag:
+            html_str_list.extend(dependency_str)
+            html_str_list.append('<br>')
+    html_str_list.append('<h1>' + id_shown_str + ' not involved in:</h1>')
     for k in all_key:
         if k in intersect or (k not in dependency_in and k not in dependency_out):
             id_count += 1
+            done_key.clear()
             dependency_str, searched_flag = recur_for_dependency(
                 k, [id_index_head + str(id_count)], [], dependency_in,
                 dependency_out_from_other_class, search_field_key)
-            if not dependency_str == "" and searched_flag:
-                html_str += dependency_str
-                html_str += '<br>'
-    html_str += '<h1>' + id_shown_str + ' not involved out:</h1>'
+            if len(dependency_str) > 0 and searched_flag:
+                html_str_list.extend(dependency_str)
+                html_str_list.append('<br>')
+    html_str_list.append('<h1>' + id_shown_str + ' not involved out:</h1>')
     for k in all_key:
         if k in intersect or (k not in dependency_in and k not in dependency_out):
             id_count += 1
+            done_key.clear()
             dependency_str, searched_flag = recur_for_dependency(
                 k, [id_index_head + str(id_count)], [], dependency_out,
                 dependency_out_from_other_class, search_field_key)
-            if not dependency_str == "" and searched_flag:
-                html_str += dependency_str
-                html_str += '<br>'
-    return html_str
+            if len(dependency_str) > 0 and searched_flag:
+                html_str_list.extend(dependency_str)
+                html_str_list.append('<br>')
+    return ''.join(html_str_list)
