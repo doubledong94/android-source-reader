@@ -1,6 +1,6 @@
 from code_.util.key_conversion_util import convert_dependency_to_longer_key
 from code_.util.key_util import get_key_from_dependency_inside_method_key, is_lv_key, is_field_key, \
-    is_field_reference_key, is_condition_key, get_field_key_from_index_key, is_index_key, get_field_key_from_reference
+    is_field_reference_key, get_field_key_from_index_key, is_index_key, get_field_key_from_reference
 from code_.z_srcReader.method_usage_html_util import recur_back_color, dependency_colors, all_id_list_for_js_variable, \
     make_colored_text_html, get_zero_degree
 
@@ -57,7 +57,7 @@ def get_dependency_html_inside_method(
         all_key[k] = ''
         for vi in v:
             all_key[vi] = ''
-    #print(len(all_key))
+    print(len(all_key))
     out_zero_key_list = get_zero_degree(all_key, dependency_out)
     html_str_list = []
     out_zero_key_list.sort()

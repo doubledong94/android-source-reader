@@ -1,5 +1,7 @@
-from code_.util.key_util import is_return_key, get_method_key_from_return_key
+from code_.util.key_util import is_return_key, get_method_key_from_return_key, \
+    get_key_from_dependency_inside_method_key, is_lv_key, is_condition_key
 from code_.util.key_conversion_util import to_longer_key_if_compressed
+from code_.util.html_util import get_style_str
 
 done_key = {}
 
@@ -37,8 +39,8 @@ def sort_dependency_by_method_size(key_list, size_dict, reverse=True):
 all_id_list_for_js_variable = []
 
 
-def make_colored_text_html(text, color):
-    return '<text style="background-color:' + color + '">' + text + '</text>'
+def make_colored_text_html(text, color, extra_style=''):
+    return '<text style="background-color:' + color + ';' + extra_style + '">' + text + '</text>'
 
 
 dependency_colors = ['#f5b7b1', '#d2b4de', '#a9cce3', '#abebc6', '#f9e79f', '#f5cba7', '#d5dbdb'] * 10
@@ -80,7 +82,7 @@ def recur_for_dependency(
         if key in dependency_dict:
             dependency_in_dir_list = dependency_dict[key]
             dependency_in_dir_list = sort_dependency_by_method_size(
-                dependency_in_dir_list,dependency_dict_pk[key], False)
+                dependency_in_dir_list, dependency_dict_pk[key], False)
             for child_node in dependency_in_dir_list:
                 id_count += 1
                 id_list_copy = id_list.copy()
@@ -353,18 +355,33 @@ def get_dependency_in_and_out_html(
     return ''.join(html_str_list)
 
 
-def recur_for_dependency_inside_method(key, id_list, super_list, dependency_dict, search_field_list=[]):
+def recur_for_dependency_inside_method_cost(
+        mk, key, id_list, super_list, dependency_dict, is_condition=False):
+    pos_key = get_key_from_dependency_inside_method_key(key)
+    if is_condition and not is_condition_key(pos_key) and key not in dependency_dict:
+        return []
+    if not is_condition and is_condition_key(pos_key):
+        return []
+    if is_lv_key(pos_key) and key not in dependency_dict:
+        return []
+
+    show_text = key.replace(mk, '')
+    class_key=mk[0:mk.rfind('.')+1]
+    show_text=show_text.replace(class_key,'')
     depth = len(super_list)
     is_recurred = key in super_list
     back_color = recur_back_color if is_recurred else dependency_colors[depth]
     padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
     id = ':'.join(id_list)
     all_id_list_for_js_variable.append(id)
-    display_style_str = ""
+    style_str = ""
     if depth > 0:
-        display_style_str = 'style="display:none"'
-    sub_str_list = ['<text ' + display_style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
-                    + padding + make_colored_text_html(key, back_color) + "<br></text>"]
+        style_str += 'display:none;'
+    style_str = style_str if style_str == '' else 'style="' + style_str + '"'
+    sub_str_list = ['<text ' + style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+                    + padding + make_colored_text_html(
+        show_text, back_color, get_style_str(
+            key, get_key_from_dependency_inside_method_key, mk)) + "<br></text>"]
     id_count = 0
     if not is_recurred:
         if key in dependency_dict:
@@ -376,6 +393,63 @@ def recur_for_dependency_inside_method(key, id_list, super_list, dependency_dict
                 super_list_copy = super_list.copy()
                 id_list_copy.append(str(id_count))
                 super_list_copy.append(key)
-                sub_str_list.extend(recur_for_dependency_inside_method(
-                    child_node, id_list_copy, super_list_copy, dependency_dict))
+                sub_str_list.extend(recur_for_dependency_inside_method_cost(
+                    mk, child_node, id_list_copy, super_list_copy, dependency_dict, is_condition))
+    if is_condition:
+        if len(sub_str_list) == 1 and key in dependency_dict:
+            all_id_list_for_js_variable.remove(id)
+            return []
+    else:
+        if len(sub_str_list) == 1 and key in dependency_dict and not is_recurred:
+            all_id_list_for_js_variable.remove(id)
+            return []
+    return sub_str_list
+
+
+def recur_for_dependency_inside_method(
+        mk, key, id_list, super_list, dependency_dict, search_field_list=[]):
+    show_text = key.replace(mk, '')
+    class_key=mk[0:mk.rfind('.')+1]
+    show_text=show_text.replace(class_key,'')
+    depth = len(super_list)
+    is_recurred = key in super_list
+    back_color = recur_back_color if is_recurred else dependency_colors[depth]
+    padding = '|'.join([' '.join(['&nbsp;'] * 2)] * depth)
+    id = ':'.join(id_list)
+    all_id_list_for_js_variable.append(id)
+    style_str = ""
+    if depth > 0:
+        style_str += 'display:none;'
+    style_str = style_str if style_str == '' else 'style="' + style_str + '"'
+    sub_str_list = ['<text ' + style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+                    + padding + make_colored_text_html(show_text, back_color,
+                                                       get_style_str(key, get_key_from_dependency_inside_method_key,
+                                                                     mk)) + "<br></text>"]
+    if key in done_key and not is_recurred and key in dependency_dict:
+        padding = '|'.join([' '.join(['&nbsp;'] * 2)] * (depth+1))
+        back_color = recur_back_color if is_recurred else dependency_colors[depth+1]
+        id+='...'
+        all_id_list_for_js_variable.append(id)
+        sub_str_list.append(
+        '<text ' + style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+                    + padding + make_colored_text_html('    .......................    ', back_color,
+                                                       get_style_str(key, get_key_from_dependency_inside_method_key,
+                                                                     mk)) + "<br></text>"
+        )
+        return sub_str_list
+    done_key[key]=''
+    id_count = 0
+    if not is_recurred:
+        if key in dependency_dict:
+            dependency_in_dir_list = list(dependency_dict[key].keys())
+            dependency_in_dir_list.sort()
+            for child_node in dependency_in_dir_list:
+                id_count += 1
+                id_list_copy = id_list.copy()
+                super_list_copy = super_list.copy()
+                id_list_copy.append(str(id_count))
+                super_list_copy.append(key)
+                sub_str_list.extend(recur_for_dependency_inside_method(mk,
+                                                                       child_node, id_list_copy, super_list_copy,
+                                                                       dependency_dict))
     return sub_str_list

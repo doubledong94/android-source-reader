@@ -35,7 +35,7 @@ from code_.util.key_util import get_method_feature_key, is_parameter_key, is_ret
 from code_.z_srcReader import method_usage_html_util
 from code_.z_srcReader.big_method_separation_util import separation
 from code_.z_srcReader.method_usage_html_util import get_size_string, get_dependency_in_and_out_html, \
-    dependency_colors, get_zero_degree, recur_for_dependency_inside_method
+    dependency_colors, get_zero_degree, recur_for_dependency_inside_method, recur_for_dependency_inside_method_cost
 from code_.z_srcReader.field_usage_html_util import get_field_usage_html
 from code_.z_srcReader.parameter_usage_html_util import get_parameter_consumption_html_in_and_out
 
@@ -61,20 +61,195 @@ def get_host_ip():
     return ip
 
 
-def get_method_structure_html(relations):
+def get_method_structure_html(relations, all_lv_sorted_by_min_order):
     html_str = make_h1_html("method structure", 'ms')
-    last_key = ''
     keys = []
+    keys.append('<table border="1">')
+    keys.append('<tr><td></td>')
+    for i in range(len(all_lv_sorted_by_min_order)):
+        keys.append('<td>')
+        show_index = str(i + 1).rjust(2)
+        keys.append(show_index.replace(' ', '&nbsp;'))
+        keys.append('</td>')
+    keys.append('</tr>')
+
+    last_key = relations[0][2]
+    last_linear_key = relations[0][3]
+    written_list_within = {}
+    read_list_within = {}
+
+    written_key2linear_key={}
+    read_key2linear_key={}
+
+    read_color = '#4444ff'
+    written_color = '#ff4444'
+    read_and_written_color = '#ffff44'
+    not_read_nor_written_color = '#ffffff'
+    self_assign_color='#000000'
+    relations.append(['', '', '', ''])
     for r in relations:
+        written_key = to_longer_key_if_compressed(r[0])
+        read_key = to_longer_key_if_compressed(r[1])
         para_k = r[2]
         linear_k = r[3]
         if last_key == para_k:
+            if written_key not in written_key2linear_key:
+                written_key2linear_key[written_key]={}
+            if read_key not in read_key2linear_key:
+                read_key2linear_key[read_key]={}
+            written_key2linear_key[written_key][linear_k]=''
+            read_key2linear_key[read_key][linear_k]=''
+            written_list_within[written_key] = ''
+            read_list_within[read_key] = ''
             continue
-        last_key = para_k
-        k = str(linear_k).rjust(4) + ' : ' + '(' + para_k + ')'
+        k = str(last_linear_key).rjust(4) + ' : ' + '(' + last_key + ')'
+        keys.append('<tr><td>')
         keys.append(k.replace(' ', '&nbsp;'))
-    return html_str + "<br>".join(keys)
+        for lv, min_order in all_lv_sorted_by_min_order:
+            if lv in read_list_within:
+                if lv in written_list_within:
+                    if lv in written_key2linear_key and lv in read_key2linear_key and \
+                        len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                        color = self_assign_color
+                    else:
+                        color = read_and_written_color
+                else:
+                    color = read_color
+            else:
+                if lv in written_list_within:
+                    color = written_color
+                else:
+                    color = not_read_nor_written_color
+            keys.append('</td><td bgcolor="' + color + '">')
+        keys.append('</td></tr>')
+        last_key = para_k
+        last_linear_key = linear_k
+        written_list_within.clear()
+        read_list_within.clear()
+        written_key2linear_key.clear()
+        read_key2linear_key.clear()
+        
+        written_list_within[written_key] = ''
+        read_list_within[read_key] = ''
 
+        if written_key not in written_key2linear_key:
+            written_key2linear_key[written_key]={}
+        if read_key not in read_key2linear_key:
+            read_key2linear_key[read_key]={}
+        written_key2linear_key[written_key][linear_k]=''
+        read_key2linear_key[read_key][linear_k]=''
+
+
+    keys.append('</table>')
+    return html_str + "".join(keys)
+
+def get_method_structure_html_expanded(relations, all_lv_sorted_by_min_order):
+    html_str = make_h1_html("method structure", 'ms')
+    keys = []
+    keys.append('<table border="1">')
+    keys.append('<tr><td></td>')
+    for i in range(len(all_lv_sorted_by_min_order)):
+        keys.append('<td>')
+        show_index = str(i + 1).rjust(2)
+        keys.append(show_index.replace(' ', '&nbsp;'))
+        keys.append('</td>')
+    keys.append('</tr>')
+
+    last_key = relations[0][2]
+    last_linear_key = relations[0][3]
+    written_list_within = {}
+    read_list_within = {}
+
+    written_key2linear_key={}
+    read_key2linear_key={}
+
+    read_color = '#66ff66'
+    written_color = '#ff6666'
+    read_and_written_color = '#999999'
+    not_read_nor_written_color1 = '#ffffff'
+    not_read_nor_written_color2 = '#dddddd'
+    not_read_nor_written_color = not_read_nor_written_color1
+    self_assign_color='#ffff33'
+    relations.append(['', '', '', ''])
+    for r in relations:
+        written_key = to_longer_key_if_compressed(r[0])
+        read_key = to_longer_key_if_compressed(r[1])
+        para_k = r[2]
+        linear_k = r[3]
+        if last_linear_key == linear_k:
+            if written_key not in written_key2linear_key:
+                written_key2linear_key[written_key]={}
+            if read_key not in read_key2linear_key:
+                read_key2linear_key[read_key]={}
+            written_key2linear_key[written_key][linear_k]=''
+            read_key2linear_key[read_key][linear_k]=''
+            written_list_within[written_key] = ''
+            read_list_within[read_key] = ''
+            continue
+        k = str(last_linear_key).rjust(4) + ' : ' + '(' + last_key + ')'
+        keys.append('<tr><td>')
+        keys.append(k.replace(' ', '&nbsp;'))
+        count = 0
+        for lv in all_lv_sorted_by_min_order:
+            count+=1
+            table_show_text=str(count)
+            if lv in read_list_within:
+                if lv in written_list_within:
+                    if lv in written_key2linear_key and lv in read_key2linear_key and \
+                        len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                        color = self_assign_color
+                    else:
+                        color = read_and_written_color
+                else:
+                    color = read_color
+            else:
+                if lv in written_list_within:
+                    color = written_color
+                else:
+                    color = not_read_nor_written_color
+                    table_show_text=''
+            keys.append('</td><td bgcolor="' + color + '"><a href="'+lv+'">'+table_show_text+'</a>')
+
+        if not last_key == para_k:
+            if not_read_nor_written_color==not_read_nor_written_color1:
+                not_read_nor_written_color=not_read_nor_written_color2
+            else:
+                not_read_nor_written_color=not_read_nor_written_color1            
+
+        keys.append('</td></tr>')
+        last_key = para_k
+        last_linear_key = linear_k
+        written_list_within.clear()
+        read_list_within.clear()
+        written_key2linear_key.clear()
+        read_key2linear_key.clear()
+        
+        written_list_within[written_key] = ''
+        read_list_within[read_key] = ''
+
+        if written_key not in written_key2linear_key:
+            written_key2linear_key[written_key]={}
+        if read_key not in read_key2linear_key:
+            read_key2linear_key[read_key]={}
+        written_key2linear_key[written_key][linear_k]=''
+        read_key2linear_key[read_key][linear_k]=''
+
+
+    keys.append('</table>')
+    return html_str + "".join(keys)
+
+
+def get_parameter_count_by_mk(method_key):
+    parameter_str = method_key.split(":")[2]
+    return len(parameter_str.split(","))
+    
+def get_parameter_and_return_keys(method_key,parameter_count):
+    return_list=[]
+    for i in range(parameter_count):
+        parameter_i = method_key + "Parameter" + str(i + 1)
+        return_list.append(parameter_i)
+    return_list.append( method_key + "Return")
+    return return_list
 
 def get_parameter_and_return_html(method_key):
     html_str = ""
@@ -92,7 +267,7 @@ def get_parameter_and_return_html(method_key):
     return html_str
 
 
-def get_all_local_variable_html(relation_list):
+def get_all_local_variable_html(relation_list,mk):
     html_str = make_h1_html("all local variables:")
     local_variables = []
     order_min_map = {}
@@ -153,11 +328,16 @@ def get_all_local_variable_html(relation_list):
         local_variables = list(set(local_variables))
         sorted_by_min_order = [[k, v] for k, v in order_min_map.items()]
         sorted_by_min_order.sort(key=lambda e: e[1])
-    for lv, min_order in sorted_by_min_order:
+    count = 0
+    sorted_by_min_order=[i[0] for i in sorted_by_min_order]
+    for lv in sorted_by_min_order:
+        count += 1
         order_span = order_max_map[lv] - order_min_map[lv] + 1
         order_count_map[lv] = list(set(order_count_map[lv]))
         space3 = "&nbsp;&nbsp;"
-        html_str += '<a href="http://' + host + ':8888/' + lv + '">' + lv + "</a>" \
+        index_text = str(count).rjust(3) + '  '
+        index_text = index_text.replace(' ', '&nbsp;')
+        html_str += index_text + make_link_html(lv.replace(mk,''), lv) \
                     + space3 + str(order_min_map[lv]) \
                     + space3 + '-' \
                     + space3 + str(order_max_map[lv]) \
@@ -166,7 +346,7 @@ def get_all_local_variable_html(relation_list):
                     + space3 + ':' \
                     + space3 + str(len(order_count_map[lv]))
         html_str += "<br><br>"
-    return html_str, node2node, local_variables
+    return html_str, node2node, local_variables, sorted_by_min_order
 
 
 def make_colored_text_html(text, color):
@@ -512,13 +692,15 @@ def get_js_code_str():
               '         id_i=id_list[index];' \
               '         if(id_i.startsWith(id+":")){' \
               '             var to_be_hidden = document.getElementById(id_i);' \
-              '             if(pick_first){' \
-              '                 if(to_be_hidden.style.display=="none"){' \
-              '                     display_value="inline";' \
-              '                 }else{' \
-              '                     display_value="none";' \
+              '             if(to_be_hidden){' \
+              '                 if(pick_first){' \
+              '                     if(to_be_hidden.style.display=="none"){' \
+              '                         display_value="inline";' \
+              '                     }else{' \
+              '                         display_value="none";' \
+              '                     }' \
+              '                     pick_first=false' \
               '                 }' \
-              '                 pick_first=false' \
               '             }' \
               '             to_be_hidden.style.display=display_value;' \
               '         }' \
@@ -622,7 +804,7 @@ def separate_method(node2node):
     return sub_graphs_return, node_too_large
 
 
-def get_dependency_html_inside_method(dependency_in, dependency_out):
+def get_dependency_html_inside_method(dependency_in, dependency_out, mk):
     dependency_in = convert_dependency_to_longer_key(dependency_in)
     dependency_out = convert_dependency_to_longer_key(dependency_out)
     all_key = {}
@@ -631,10 +813,28 @@ def get_dependency_html_inside_method(dependency_in, dependency_out):
         for vi in v:
             all_key[vi] = ''
     out_zero_key_list = get_zero_degree(all_key, dependency_out)
+    in_zero_key_list = get_zero_degree(all_key, dependency_in)
     id_count = 0
     id_index_head = 'insm_id_'
-    html_str_list = [make_h1_html('method actions', 'ma')]
     out_zero_key_list.sort()
+    in_zero_key_list.sort()
+    html_str_list = []
+
+    html_str_list.append(make_h1_html('method action cost', 'mac'))
+    for key in in_zero_key_list:
+        pos_key = get_key_from_dependency_inside_method_key(key)
+        if is_lv_key(pos_key) or pos_key == 'null' or pos_key.endswith(':Local') \
+                or pos_key in typekey2fieldkey or pos_key in typekey2methodkey:
+            continue
+        id_count += 1
+        method_usage_html_util.done_key.clear()
+        to_be_extended = recur_for_dependency_inside_method_cost(
+            mk, key, [id_index_head + str(id_count)], [], dependency_out, False)
+        if len(to_be_extended) > 0:
+            html_str_list.extend(to_be_extended)
+            html_str_list.append('<br>')
+
+    html_str_list.append(make_h1_html('method actions', 'ma'))
     for key in out_zero_key_list:
         pos_key = get_key_from_dependency_inside_method_key(key)
         if is_lv_key(pos_key):
@@ -647,10 +847,25 @@ def get_dependency_html_inside_method(dependency_in, dependency_out):
         if is_condition_key(pos_key):
             continue
         id_count += 1
-        print(key)
+        method_usage_html_util.done_key.clear()
         html_str_list.extend(
-            recur_for_dependency_inside_method(key, [id_index_head + str(id_count)], [], dependency_in))
+            recur_for_dependency_inside_method(mk, key, [id_index_head + str(id_count)], [], dependency_in))
         html_str_list.append('<br>')
+
+    html_str_list.append(make_h1_html('method condition cost', 'mcc'))
+    for key in in_zero_key_list:
+        pos_key = get_key_from_dependency_inside_method_key(key)
+        if is_lv_key(pos_key) or pos_key == 'null' or pos_key.endswith(':Local') \
+                or pos_key in typekey2fieldkey or pos_key in typekey2methodkey:
+            continue
+        id_count += 1
+        method_usage_html_util.done_key.clear()
+        to_be_extended = recur_for_dependency_inside_method_cost(
+            mk, key, [id_index_head + str(id_count)], [], dependency_out, True)
+        if len(to_be_extended) > 0:
+            html_str_list.extend(to_be_extended)
+            html_str_list.append('<br>')
+
     html_str_list.append(make_h1_html('method conditions', 'mc'))
     for key in out_zero_key_list:
         pos1 = key.find(' ')
@@ -658,74 +873,63 @@ def get_dependency_html_inside_method(dependency_in, dependency_out):
         if not is_condition_key(key[pos1 + 1:pos]):
             continue
         id_count += 1
-        print(key)
+        method_usage_html_util.done_key.clear()
         html_str_list.extend(
-            recur_for_dependency_inside_method(key, [id_index_head + str(id_count)], [], dependency_in))
+            recur_for_dependency_inside_method(mk, key, [id_index_head + str(id_count)], [], dependency_in))
         html_str_list.append('<br>')
+
     return ''.join(html_str_list)
 
 
 if __name__ == "__main__":
 
-    read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
-    written_relation = pickle.load(open(written_relation_compressed_path, "rb"))
-
     method2relations = pickle.load(open(method2relations_compressed_path, 'rb'))
     method2global_relations = pickle.load(open(method2global_relations_compressed_path, 'rb'))
-
-    fieldFeatureKey2fieldFeatureRelationList = \
-        pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))
-
-    LV2relations = pickle.load(open(LV2relations_file_path, 'rb'))
     fieldkey2fieldTypekey = pickle.load(open(fieldkey2fieldTypekey_path, 'rb'))
     LVKey2LVTypeKey = pickle.load(open(LVKey2LVTypeKey_path, 'rb'))
+    methodKey2typeKey = pickle.load(open(methodKey2typeKey_path, 'rb'))
+    method2lv_dependency_in_dir = pickle.load(open(method2lv_dependency_in_dir_file_path, 'rb'))
+    method2lv_dependency_out_dir = pickle.load(open(method2lv_dependency_out_dir_file_path, 'rb'))
+    method_size_in = pickle.load(open(method_size_map_in_path, 'rb'))
+    method_size_out = pickle.load(open(method_size_map_out_path, 'rb'))
+    global_method_size_in = pickle.load(open(global_method_size_map_in_path, 'rb'))
+    global_method_size_out = pickle.load(open(global_method_size_map_out_path, 'rb'))
+    method2methodFromOtherClass_in_dir = pickle.load(open(method2methodFromOtherClass_in_dir_path, 'rb'))
+    method2methodFromOtherClass_out_dir = pickle.load(open(method2methodFromOtherClass_out_dir_path, 'rb'))
+    method2dependency_in_inside_method = pickle.load(open(method2dependency_in_inside_method_compressed_path, 'rb'))
+    method2dependency_out_inside_method = pickle.load(open(method2dependency_out_inside_method_compressed_path, 'rb'))
     typekey2fieldkey = pickle.load(open(typekey2fieldkey_path, 'rb'))
     typekey2methodkey = pickle.load(open(typekey2methodkey_path, 'rb'))
+    methodKey2srcLoc = pickle.load(open(methodKey2srcLoc_path, 'rb'))
+    fieldKey2srcLoc = pickle.load(open(fieldKey2srcLoc_path, 'rb'))
+    LV2relations = pickle.load(open(LV2relations_file_path, 'rb'))
+    ###method
+
+    read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
+    written_relation = pickle.load(open(written_relation_compressed_path, "rb"))    
+    fieldFeatureKey2fieldFeatureRelationList = \
+        pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))    
     interfaceType = pickle.load(open(interfaceType_path, 'rb'))
     superTypes = pickle.load(open(superTypes_path, 'rb'))
     subTypes = pickle.load(open(subTypes_path, 'rb'))
     fieldKey2typeKey = pickle.load(open(fieldKey2typeKey_path, 'rb'))
-    methodKey2typeKey = pickle.load(open(methodKey2typeKey_path, 'rb'))
     type2instance_for_field = pickle.load(open(type2instance_for_field_file_path, 'rb'))
     type2instance_for_local = pickle.load(open(type2instance_for_local_file_path, 'rb'))
-    methodKey2srcLoc = pickle.load(open(methodKey2srcLoc_path, 'rb'))
-    fieldKey2srcLoc = pickle.load(open(fieldKey2srcLoc_path, 'rb'))
-    fieldKey2fieldFeatureCount = pickle.load(open(fieldKey2fieldFeatureCount_path, 'rb'))
-    method2lv_dependency_in_dir = pickle.load(open(method2lv_dependency_in_dir_file_path, 'rb'))
-    method2lv_dependency_out_dir = pickle.load(open(method2lv_dependency_out_dir_file_path, 'rb'))
-
+    fieldKey2fieldFeatureCount = pickle.load(open(fieldKey2fieldFeatureCount_path, 'rb'))    
     class2field_dependency_in_dir = pickle.load(open(class2field_dependency_in_dir_file_path, 'rb'))
-    class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))
-
-    method_size_in = pickle.load(open(method_size_map_in_path, 'rb'))
-    method_size_out = pickle.load(open(method_size_map_out_path, 'rb'))
-
-    global_method_size_in = pickle.load(open(global_method_size_map_in_path, 'rb'))
-    global_method_size_out = pickle.load(open(global_method_size_map_out_path, 'rb'))
-
+    class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))    
     class2self_responsibility_in = pickle.load(open(class2self_responsibility_in_path, 'rb'))
-    class2self_responsibility_out = pickle.load(open(class2self_responsibility_out_path, 'rb'))
-
+    class2self_responsibility_out = pickle.load(open(class2self_responsibility_out_path, 'rb'))    
     class2self_dependency_in_sum = pickle.load(open(class2self_dependency_in_sum_path, 'rb'))
     class2self_dependency_out_sum = pickle.load(open(class2self_dependency_out_sum_path, 'rb'))
-
     class2global_dependency_in_sum = pickle.load(open(class2global_dependency_in_sum_path, 'rb'))
-    class2global_dependency_out_sum = pickle.load(open(class2global_dependency_out_sum_path, 'rb'))
-
+    class2global_dependency_out_sum = pickle.load(open(class2global_dependency_out_sum_path, 'rb'))    
     field_consumption_dependency_in_dir = pickle.load(open(global_field_consumption_dependency_in_dir_path, 'rb'))
     field_consumption_dependency_out_dir = pickle.load(open(global_field_consumption_dependency_out_dir_path, 'rb'))
-
-    method2methodFromOtherClass_in_dir = pickle.load(open(method2methodFromOtherClass_in_dir_path, 'rb'))
-    method2methodFromOtherClass_out_dir = pickle.load(open(method2methodFromOtherClass_out_dir_path, 'rb'))
-
     type_dependency_in = pickle.load(open(type_dependency_in_path, 'rb'))
     type_dependency_out = pickle.load(open(type_dependency_out_path, 'rb'))
-
     type_size_in = pickle.load(open(type_size_in_path, 'rb'))
     type_size_out = pickle.load(open(type_size_out_path, 'rb'))
-
-    method2dependency_in_inside_method = pickle.load(open(method2dependency_in_inside_method_compressed_path, 'rb'))
-    method2dependency_out_inside_method = pickle.load(open(method2dependency_out_inside_method_compressed_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -932,27 +1136,37 @@ if __name__ == "__main__":
                 src_ = request_str + "src"
                 http_response += 'src: <a href="http://' + host + ':8888/' + src_ + '">' + src_ + "</a><br>"
                 http_response += "<br>"
-                if shorter_key in method2relations:
-                    http_response += get_method_structure_html(method2relations[shorter_key])
                 http_response += get_parameter_and_return_html(request_str)
+
                 # method features
                 if shorter_key in method2global_relations:
                     method_features = get_method_features(shorter_key)
                     http_response += get_method_feature_html(request_str, method_features)
+
+                all_lv_sorted_by_min_order = []
                 if shorter_key in method2relations:
-                    all_local_html, local_node2node, all_lv_key = \
-                        get_all_local_variable_html(method2relations[shorter_key])
+                    all_local_html, local_node2node, all_lv_key, all_lv_sorted_by_min_order = \
+                        get_all_local_variable_html(method2relations[shorter_key],request_str)
                     http_response += all_local_html
+
+                if shorter_key in method2relations:
+                    all_lv_sorted_by_min_order.extend(get_parameter_and_return_keys(request_str,\
+                        get_parameter_count_by_mk(request_str)))
+                    http_response += get_method_structure_html_expanded(
+                        method2relations[shorter_key], all_lv_sorted_by_min_order)
+
+                if shorter_key in method2relations:
                     all_lv_key.sort()
                     http_response += get_dependency_html(
                         all_lv_key,
                         method2lv_dependency_in_dir[request_str],
                         method2lv_dependency_out_dir[request_str],
                         'local variable', len(request_str), 'lv_id_')
+
                 if shorter_key in method2dependency_in_inside_method:
                     http_response += get_dependency_html_inside_method(
                         method2dependency_in_inside_method[shorter_key],
-                        method2dependency_out_inside_method[shorter_key])
+                        method2dependency_out_inside_method[shorter_key], request_str)
                 if shorter_key in method2global_relations:
                     if shorter_key not in method2relations:
                         local_node2node = {}
