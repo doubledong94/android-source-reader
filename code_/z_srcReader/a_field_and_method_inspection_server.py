@@ -143,13 +143,29 @@ def get_method_structure_html(relations, all_lv_sorted_by_min_order):
     keys.append('</table>')
     return html_str + "".join(keys)
 
-def get_method_structure_html_expanded(relations, all_lv_sorted_by_min_order):
-    html_str = make_h1_html("method structure", 'ms')
+def has_condition_key(keys):
+    for i in keys:
+        if is_condition_key(i):
+            return True
+    return False
+
+def bridge(k1,k2):
+    pass
+
+def get_intermedia(graph,k_start,k_end):
+    pass
+
+
+def get_lv_trace_html(relations, all_lv_sorted_by_min_order,order_max_map,mk):
+    html_str = make_h1_html("Local Variable Trace", 'lvt')
     keys = []
     keys.append('<table border="1">')
     keys.append('<tr><td></td>')
     for i in range(len(all_lv_sorted_by_min_order)):
-        keys.append('<td>')
+        back_color='#ffffff'
+        if not is_lv_key(all_lv_sorted_by_min_order[i]):
+            back_color='#bbbbbb'
+        keys.append('<td bgcolor="'+back_color+'">')
         show_index = str(i + 1).rjust(2)
         keys.append(show_index.replace(' ', '&nbsp;'))
         keys.append('</td>')
@@ -163,20 +179,35 @@ def get_method_structure_html_expanded(relations, all_lv_sorted_by_min_order):
     written_key2linear_key={}
     read_key2linear_key={}
 
-    read_color = '#66ff66'
-    written_color = '#ff6666'
-    read_and_written_color = '#999999'
+    #read_and_written_color = '#000000'
+    start_line_color='#ffaaaa'
+    finish_line_color='#aaaaff'
+    written_color = '#ffaaaa'
+    read_color = '#aaaaff'
+    self_assign_color='#99ff99'
+    out_of_range_color='#99999'
+    read_by_condition_color = '#ffff66'
     not_read_nor_written_color1 = '#ffffff'
-    not_read_nor_written_color2 = '#dddddd'
+    not_read_nor_written_color2 = '#eeeeee'
     not_read_nor_written_color = not_read_nor_written_color1
-    self_assign_color='#ffff33'
     relations.append(['', '', '', ''])
+    lv2read={}
+    lv2written={}
+    return_local=''
     for r in relations:
         written_key = to_longer_key_if_compressed(r[0])
         read_key = to_longer_key_if_compressed(r[1])
         para_k = r[2]
         linear_k = r[3]
         if last_linear_key == linear_k:
+            if is_field_key(written_key):
+                return_local=read_key
+            if written_key.endswith(':Local') and read_key.endswith(':Return'):
+                return_local=read_key
+            if written_key in all_lv_sorted_by_min_order:
+                lv2read[written_key]=read_key
+            if read_key in all_lv_sorted_by_min_order:
+                lv2written[read_key]=written_key        
             if written_key not in written_key2linear_key:
                 written_key2linear_key[written_key]={}
             if read_key not in read_key2linear_key:
@@ -187,29 +218,135 @@ def get_method_structure_html_expanded(relations, all_lv_sorted_by_min_order):
             read_list_within[read_key] = ''
             continue
         k = str(last_linear_key).rjust(4) + ' : ' + '(' + last_key + ')'
-        keys.append('<tr><td>')
+        keys.append('<tr><td bgcolor="' + not_read_nor_written_color + '">')
         keys.append(k.replace(' ', '&nbsp;'))
+        color_count_read=0
+        color_count_written=0
+        current_row=[]
         count = 0
         for lv in all_lv_sorted_by_min_order:
+            max_order=order_max_map[lv] if lv in order_max_map else 1000000
             count+=1
             table_show_text=str(count)
+            relaion_key=''
             if lv in read_list_within:
                 if lv in written_list_within:
                     if lv in written_key2linear_key and lv in read_key2linear_key and \
                         len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
                         color = self_assign_color
+                        relaion_key=lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
+                        color_count_read+=1
+                        color_count_written+=1
                     else:
                         color = read_and_written_color
                 else:
-                    color = read_color
+                    if has_condition_key(written_list_within):
+                        color = read_by_condition_color
+                        color_count_read+=1
+                        color_count_written+=1
+                        relaion_key=lv2written[lv] if lv in lv2written else ''
+                    else:
+                        relaion_key=(lv2written[lv] if lv in lv2written else '') +'<br>&nbsp;&nbsp;'+ return_local
+                        color = read_color
+                        color_count_read+=1
             else:
                 if lv in written_list_within:
+                    relaion_key=(lv2read[lv] if lv in lv2read else '') +'<br>&nbsp;&nbsp;'+ return_local
                     color = written_color
+                    color_count_written+=1
                 else:
-                    color = not_read_nor_written_color
+                    if int(last_linear_key) < max_order or int(last_linear_key) > max_order +5:
+                        color = not_read_nor_written_color
+                    else:
+                        color = out_of_range_color
                     table_show_text=''
-            keys.append('</td><td bgcolor="' + color + '"><a href="'+lv+'">'+table_show_text+'</a>')
+            pop_text='&nbsp;&nbsp;'+lv.replace(mk,'')+'<br>&nbsp;&nbsp;'+relaion_key.replace(mk,'')
+            if table_show_text=='':
+                current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">'+table_show_text)
+            else:
+                current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="'\
+                + pop_text + '"bgcolor="' + color + '">'+table_show_text)
+        if color_count_written == 0 and color_count_read > 0 :
+            current_row.clear()
+            count = 0
+            for lv in all_lv_sorted_by_min_order:
+                max_order=order_max_map[lv] if lv in order_max_map else 1000000
+                count+=1
+                table_show_text=str(count)
+                relaion_key=''
+                if lv in read_list_within:
+                    if lv in written_list_within:
+                        if lv in written_key2linear_key and lv in read_key2linear_key and \
+                            len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                            color = self_assign_color
+                            relaion_key=lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
+                        else:
+                            color = read_and_written_color
+                    else:
+                        if has_condition_key(written_list_within):
+                            color = read_by_condition_color
+                            relaion_key=lv2written[lv] if lv in lv2written else ''
+                        else:
+                            relaion_key=(lv2written[lv] if lv in lv2written else '') +'<br>&nbsp;&nbsp;'+ return_local
+                            color = read_color
+                else:
+                    if lv in written_list_within:
+                        relaion_key=(lv2read[lv] if lv in lv2read else '') +'<br>&nbsp;&nbsp;'+ return_local
+                        color = written_color
+                    else:
+                        if int(last_linear_key) < max_order or int(last_linear_key) > max_order +5:
+                            color = start_line_color
+                        else:
+                            color = out_of_range_color
+                        table_show_text=''
+                pop_text='&nbsp;&nbsp;'+lv.replace(mk,'')+'<br>'+'&nbsp;&nbsp;'+relaion_key.replace(mk,'')
+                if table_show_text=='':
+                    current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">'+table_show_text)
+                else:
+                    current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="'\
+                    + pop_text + '"bgcolor="' + color + '">'+table_show_text)
+                
+        if color_count_written > 0 and color_count_read == 0 :
+            current_row.clear()
+            count = 0
+            for lv in all_lv_sorted_by_min_order:
+                max_order=order_max_map[lv] if lv in order_max_map else 1000000
+                count+=1
+                table_show_text=str(count)
+                relaion_key=''
+                if lv in read_list_within:
+                    if lv in written_list_within:
+                        if lv in written_key2linear_key and lv in read_key2linear_key and \
+                            len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                            color = self_assign_color
+                            relaion_key=lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
+                        else:
+                            color = read_and_written_color
+                    else:
+                        if has_condition_key(written_list_within):
+                            color = read_by_condition_color
+                            relaion_key=lv2written[lv] if lv in lv2written else ''
+                        else:
+                            relaion_key=(lv2written[lv] if lv in lv2written else '') +'<br>&nbsp;&nbsp;'+ return_local
+                            color = read_color
+                else:
+                    if lv in written_list_within:
+                        relaion_key=(lv2read[lv] if lv in lv2read else '') +'<br>&nbsp;&nbsp;'+ return_local
+                        color = written_color
+                    else:
+                        if int(last_linear_key) < max_order or int(last_linear_key) > max_order +5:
+                            color = finish_line_color
+                        else:
+                            color = out_of_range_color
+                        table_show_text=''
+                pop_text='&nbsp;&nbsp;'+lv.replace(mk,'')+'<br>'+'&nbsp;&nbsp;'+relaion_key.replace(mk,'')
+                if table_show_text=='':
+                    current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">'+table_show_text)
+                else:
+                    current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="'\
+                    + pop_text + '"bgcolor="' + color + '">'+table_show_text)
 
+        keys.extend(current_row)
         if not last_key == para_k:
             if not_read_nor_written_color==not_read_nor_written_color1:
                 not_read_nor_written_color=not_read_nor_written_color2
@@ -223,6 +360,17 @@ def get_method_structure_html_expanded(relations, all_lv_sorted_by_min_order):
         read_list_within.clear()
         written_key2linear_key.clear()
         read_key2linear_key.clear()
+        return_local=''
+        lv2read.clear()
+        lv2written.clear()
+        if is_field_key(written_key):
+            return_local=read_key
+        if written_key.endswith(':Local') and read_key.endswith(':Return'):
+            return_local=read_key
+        if written_key in all_lv_sorted_by_min_order:
+            lv2read[written_key]=read_key
+        if read_key in all_lv_sorted_by_min_order:
+            lv2written[read_key]=written_key
         
         written_list_within[written_key] = ''
         read_list_within[read_key] = ''
@@ -233,8 +381,6 @@ def get_method_structure_html_expanded(relations, all_lv_sorted_by_min_order):
             read_key2linear_key[read_key]={}
         written_key2linear_key[written_key][linear_k]=''
         read_key2linear_key[read_key][linear_k]=''
-
-
     keys.append('</table>')
     return html_str + "".join(keys)
 
@@ -346,7 +492,7 @@ def get_all_local_variable_html(relation_list,mk):
                     + space3 + ':' \
                     + space3 + str(len(order_count_map[lv]))
         html_str += "<br><br>"
-    return html_str, node2node, local_variables, sorted_by_min_order
+    return html_str, node2node, local_variables, sorted_by_min_order,order_max_map
 
 
 def make_colored_text_html(text, color):
@@ -680,10 +826,32 @@ def convert_python_list2js_list(var_name, python_list):
 
 
 def get_js_code_str():
-    print('get_js_code_str')
     all_dependency_id_list = method_usage_html_util.all_id_list_for_js_variable
     id_list_js_define_str = convert_python_list2js_list('id_list', all_dependency_id_list)
     js_str = "<script>"
+    js_str += '''
+                function show(event){
+                    event=event||window.event;
+                    let show_text=event.target.dataset.text
+                    let pop=document.getElementById('pop');
+                    let x=0,y=0;
+                    let target = event.currentTarget;
+                    do{
+                        x+=target.offsetLeft;
+                        y+=target.offsetTop;
+                        target=target.offsetParent;
+                    }while(target!==document.body)
+                    
+                    pop.style.display='block';
+                    pop.style.left=x-100+'px';
+                    pop.style.top=y-80+'px';
+                    pop.innerHTML=show_text
+                }
+                function hiden(){
+                    let pop=document.getElementById('pop');
+                    pop.style.display='none';
+                }
+            '''
     js_str += 'function dependency_click(id){' \
               + id_list_js_define_str + \
               '     var pick_first=true;' \
@@ -1145,15 +1313,15 @@ if __name__ == "__main__":
 
                 all_lv_sorted_by_min_order = []
                 if shorter_key in method2relations:
-                    all_local_html, local_node2node, all_lv_key, all_lv_sorted_by_min_order = \
+                    all_local_html, local_node2node, all_lv_key, all_lv_sorted_by_min_order,order_max_map = \
                         get_all_local_variable_html(method2relations[shorter_key],request_str)
                     http_response += all_local_html
 
                 if shorter_key in method2relations:
                     all_lv_sorted_by_min_order.extend(get_parameter_and_return_keys(request_str,\
                         get_parameter_count_by_mk(request_str)))
-                    http_response += get_method_structure_html_expanded(
-                        method2relations[shorter_key], all_lv_sorted_by_min_order)
+                    http_response += get_lv_trace_html(
+                        method2relations[shorter_key], all_lv_sorted_by_min_order,order_max_map,request_str)
 
                 if shorter_key in method2relations:
                     all_lv_key.sort()
@@ -1162,19 +1330,20 @@ if __name__ == "__main__":
                         method2lv_dependency_in_dir[request_str],
                         method2lv_dependency_out_dir[request_str],
                         'local variable', len(request_str), 'lv_id_')
-
+                print('get_dependency_html_inside_method start')
                 if shorter_key in method2dependency_in_inside_method:
                     http_response += get_dependency_html_inside_method(
                         method2dependency_in_inside_method[shorter_key],
                         method2dependency_out_inside_method[shorter_key], request_str)
-                if shorter_key in method2global_relations:
-                    if shorter_key not in method2relations:
-                        local_node2node = {}
-                    relation_list = method2global_relations[shorter_key]
-                    relation_list.sort(key=lambda e: e[2])
-                    http_response += get_relation_without_local_html(relation_list, local_node2node)
-                # if shorter_key in method2relations:
-                #     http_response += get_relation_with_local_html(method2relations[shorter_key])
+                print('get_dependency_html_inside_method end')
+                #if shorter_key in method2global_relations:
+                #    if shorter_key not in method2relations:
+                #        local_node2node = {}
+                #    relation_list = method2global_relations[shorter_key]
+                #    relation_list.sort(key=lambda e: e[2])
+                #    http_response += get_relation_without_local_html(relation_list, local_node2node)
+                #if shorter_key in method2relations:
+                #    http_response += get_relation_with_local_html(method2relations[shorter_key])
             # 局部变量的历程
             elif request_str in LVKey2LVTypeKey:
                 http_response += make_h1_html(request_str)
@@ -1402,6 +1571,35 @@ if __name__ == "__main__":
             exc_type, exc_value, exc_traceback = sys.exc_info()
             error = '<br>'.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
             http_response += error
+        http_response +='''
+            <style type="text/css">
+                .pop{
+                  width:800px;
+                  height:70px;
+                  border:2px solid grey;
+                  border-radius: 2px;
+                  box-shadow: 2px 2px 2px grey;
+                  position:absolute;
+                  background-color:white;
+                  display:none;
+                }
+                .triangle-bottom{
+                  width:0;
+                  height:0;
+                  border-top:20px solid grey;
+                  border-left:10px dashed transparent;
+                  border-right:10px dashed transparent;
+                  position:absolute;
+                  left:90px;
+                  top:100px;
+                }　
+            </style>
+        '''
+        http_response +='''
+            <div class='pop' id='pop' >
+            <div id='triangle' class='triangle-bottom'></div>
+            </div>
+        '''
         http_response += get_js_code_str()
         http_response = decompress_by_replace(http_response, [])
         print(request_str)

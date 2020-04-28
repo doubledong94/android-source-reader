@@ -382,6 +382,21 @@ def recur_for_dependency_inside_method_cost(
                     + padding + make_colored_text_html(
         show_text, back_color, get_style_str(
             key, get_key_from_dependency_inside_method_key, mk)) + "<br></text>"]
+
+    if key in done_key and not is_recurred and key in dependency_dict:
+        padding = '|'.join([' '.join(['&nbsp;'] * 2)] * (depth+1))
+        back_color = recur_back_color if is_recurred else dependency_colors[depth+1]
+        id+='...'
+        all_id_list_for_js_variable.append(id)
+        sub_str_list.append(
+        '<text ' + style_str + ' onclick="dependency_click(\'' + id + '\')" id=' + id + '>' \
+                    + padding + make_colored_text_html('    .......................    ', back_color,
+                                                       get_style_str(key, get_key_from_dependency_inside_method_key,
+                                                                     mk)) + "<br></text>"
+        )
+        return sub_str_list
+    done_key[key]=''
+
     id_count = 0
     if not is_recurred:
         if key in dependency_dict:
