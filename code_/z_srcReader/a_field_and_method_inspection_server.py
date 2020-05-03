@@ -16,7 +16,15 @@ from code_.util.file_util import \
     method_size_map_in_path, method_size_map_out_path, global_method_size_map_in_path, global_method_size_map_out_path, \
     method2methodFromOtherClass_in_dir_path, \
     method2methodFromOtherClass_out_dir_path, get_file_into_html, \
-    method2dependency_in_inside_method_compressed_path, method2dependency_out_inside_method_compressed_path
+    method2dependency_in_inside_method_compressed_path, method2dependency_out_inside_method_compressed_path, \
+    read_relation_compressed_path, written_relation_compressed_path, \
+    fieldFeatureKey2fieldFeatureRelationList_compressed_path, interfaceType_path, superTypes_path, subTypes_path, \
+    fieldKey2typeKey_path, type2instance_for_field_file_path, type2instance_for_local_file_path, \
+    fieldKey2fieldFeatureCount_path, class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
+    class2self_responsibility_in_path, class2self_responsibility_out_path, class2self_dependency_in_sum_path, \
+    class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path, \
+    global_field_consumption_dependency_in_dir_path, global_field_consumption_dependency_out_dir_path, \
+    type_dependency_in_path, type_dependency_out_path, type_size_in_path, type_size_out_path
 from code_.util.html_util import host, make_h1_html, make_colored_text_html, convert_pk_to_colored_text, \
     dependency_colors
 from code_.util.key_conversion_util import decompress_by_replace, to_shorter_key_if_compressed, \
@@ -1052,7 +1060,7 @@ if __name__ == "__main__":
     read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
     written_relation = pickle.load(open(written_relation_compressed_path, "rb"))
     fieldFeatureKey2fieldFeatureRelationList = \
-         pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))
+        pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))
     interfaceType = pickle.load(open(interfaceType_path, 'rb'))
     superTypes = pickle.load(open(superTypes_path, 'rb'))
     subTypes = pickle.load(open(subTypes_path, 'rb'))
