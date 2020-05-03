@@ -7,7 +7,14 @@ LVKey2LVTypeKey = pickle.load(open(LVKey2LVTypeKey_path, 'rb'))
 
 
 def is_lv_key_or_index(key):
-    return key in LVKey2LVTypeKey or key.endswith("-Index")
+    return key in LVKey2LVTypeKey or is_index_key(key)
+
+def is_index_key(key):
+    return key.endswith("-Index")
+
+
+def get_field_key_from_index_key(key):
+    return key[:-6]
 
 
 def is_lv_key(key):

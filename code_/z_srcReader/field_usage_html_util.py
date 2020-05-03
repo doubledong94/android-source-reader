@@ -2,8 +2,9 @@ from code_.util.key_conversion_util import to_longer_key_if_compressed, convert_
     to_shorter_key_if_compressed
 from code_.z_srcReader.inside_method_html_util import get_dependency_html_inside_method
 from code_.z_srcReader.method_usage_html_util import handle_method_dependency_in, get_zero_degree, \
-    sort_dependency_by_method_size, dependency_colors, all_id_list_for_js_variable, \
+    sort_dependency_by_method_size, all_id_list_for_js_variable, \
     make_colored_text_html
+from code_.util.html_util import dependency_colors
 
 done_key = {}
 

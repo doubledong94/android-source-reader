@@ -1,7 +1,7 @@
 from code_.util.key_util import is_return_key, get_method_key_from_return_key, \
     get_key_from_dependency_inside_method_key, is_lv_key, is_condition_key
 from code_.util.key_conversion_util import to_longer_key_if_compressed
-from code_.util.html_util import get_style_str
+from code_.util.html_util import get_style_str, dependency_colors
 
 done_key = {}
 
@@ -42,8 +42,6 @@ all_id_list_for_js_variable = []
 def make_colored_text_html(text, color, extra_style=''):
     return '<text style="background-color:' + color + ';' + extra_style + '">' + text + '</text>'
 
-
-dependency_colors = ['#f5b7b1', '#d2b4de', '#a9cce3', '#abebc6', '#f9e79f', '#f5cba7', '#d5dbdb'] * 10
 
 recur_back_color = '#ff5555'
 done_color = '#5555ff'
@@ -385,7 +383,7 @@ def recur_for_dependency_inside_method_cost(
 
     if key in done_key and not is_recurred and key in dependency_dict:
         padding = '|'.join([' '.join(['&nbsp;'] * 2)] * (depth+1))
-        back_color = recur_back_color if is_recurred else dependency_colors[depth+1]
+        back_color = recur_back_color if is_recurred else dependency_colors[depth + 1]
         id+='...'
         all_id_list_for_js_variable.append(id)
         sub_str_list.append(
@@ -442,7 +440,7 @@ def recur_for_dependency_inside_method(
                                                                      mk)) + "<br></text>"]
     if key in done_key and not is_recurred and key in dependency_dict:
         padding = '|'.join([' '.join(['&nbsp;'] * 2)] * (depth+1))
-        back_color = recur_back_color if is_recurred else dependency_colors[depth+1]
+        back_color = recur_back_color if is_recurred else dependency_colors[depth + 1]
         id+='...'
         all_id_list_for_js_variable.append(id)
         sub_str_list.append(

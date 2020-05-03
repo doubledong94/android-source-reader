@@ -1,8 +1,9 @@
 from code_.util.key_conversion_util import convert_dependency_to_longer_key
 from code_.util.key_util import get_key_from_dependency_inside_method_key, is_lv_key, is_field_key, \
     is_field_reference_key, get_field_key_from_index_key, is_index_key, get_field_key_from_reference
-from code_.z_srcReader.method_usage_html_util import recur_back_color, dependency_colors, all_id_list_for_js_variable, \
+from code_.z_srcReader.method_usage_html_util import recur_back_color, all_id_list_for_js_variable, \
     make_colored_text_html, get_zero_degree
+from code_.util.html_util import dependency_colors
 
 local_all_id_list = []
 done_key = {}

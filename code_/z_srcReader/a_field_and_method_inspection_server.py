@@ -9,23 +9,16 @@ from code_.d_methodAndFieldFeature.a_methodFeature import get_method_feature_rel
 from code_.util.file_util import \
     LV2relations_file_path, LVKey2LVTypeKey_path, \
     fieldkey2fieldTypekey_path, typekey2fieldkey_path, \
-    typekey2methodkey_path, superTypes_path, subTypes_path, fieldKey2typeKey_path, methodKey2typeKey_path, \
-    type2instance_for_field_file_path, type2instance_for_local_file_path, methodKey2srcLoc_path, get_lines, src_abs_dir, \
-    fieldKey2srcLoc_path, interfaceType_path, fieldKey2fieldFeatureCount_path, \
-    method2lv_dependency_in_dir_file_path, method2lv_dependency_out_dir_file_path, \
-    class2field_dependency_in_dir_file_path, class2field_dependency_out_dir_file_path, \
-    read_relation_compressed_path, \
-    written_relation_compressed_path, method2relations_compressed_path, method2global_relations_compressed_path, \
-    fieldFeatureKey2fieldFeatureRelationList_compressed_path, \
+    typekey2methodkey_path, methodKey2typeKey_path, \
+    methodKey2srcLoc_path, get_lines, src_abs_dir, \
+    fieldKey2srcLoc_path, method2lv_dependency_in_dir_file_path, method2lv_dependency_out_dir_file_path, \
+    method2relations_compressed_path, method2global_relations_compressed_path, \
     method_size_map_in_path, method_size_map_out_path, global_method_size_map_in_path, global_method_size_map_out_path, \
-    class2self_responsibility_in_path, class2self_responsibility_out_path, class2self_dependency_in_sum_path, \
-    class2self_dependency_out_sum_path, class2global_dependency_in_sum_path, class2global_dependency_out_sum_path, \
     method2methodFromOtherClass_in_dir_path, \
-    method2methodFromOtherClass_out_dir_path, type_dependency_in_path, type_dependency_out_path, type_size_out_path, \
-    type_size_in_path, global_field_consumption_dependency_out_dir_path, \
-    global_field_consumption_dependency_in_dir_path, get_file_into_html, \
+    method2methodFromOtherClass_out_dir_path, get_file_into_html, \
     method2dependency_in_inside_method_compressed_path, method2dependency_out_inside_method_compressed_path
-from code_.util.html_util import host, make_h1_html
+from code_.util.html_util import host, make_h1_html, make_colored_text_html, convert_pk_to_colored_text, \
+    dependency_colors
 from code_.util.key_conversion_util import decompress_by_replace, to_shorter_key_if_compressed, \
     to_longer_key_if_compressed, convert_dependency_to_longer_key
 from code_.util.key_util import get_method_feature_key, is_parameter_key, is_return_key, \
@@ -35,7 +28,7 @@ from code_.util.key_util import get_method_feature_key, is_parameter_key, is_ret
 from code_.z_srcReader import method_usage_html_util
 from code_.z_srcReader.big_method_separation_util import separation
 from code_.z_srcReader.method_usage_html_util import get_size_string, get_dependency_in_and_out_html, \
-    dependency_colors, get_zero_degree, recur_for_dependency_inside_method, recur_for_dependency_inside_method_cost
+    get_zero_degree, recur_for_dependency_inside_method, recur_for_dependency_inside_method_cost
 from code_.z_srcReader.field_usage_html_util import get_field_usage_html
 from code_.z_srcReader.parameter_usage_html_util import get_parameter_consumption_html_in_and_out
 
@@ -78,14 +71,14 @@ def get_method_structure_html(relations, all_lv_sorted_by_min_order):
     written_list_within = {}
     read_list_within = {}
 
-    written_key2linear_key={}
-    read_key2linear_key={}
+    written_key2linear_key = {}
+    read_key2linear_key = {}
 
     read_color = '#4444ff'
     written_color = '#ff4444'
     read_and_written_color = '#ffff44'
     not_read_nor_written_color = '#ffffff'
-    self_assign_color='#000000'
+    self_assign_color = '#000000'
     relations.append(['', '', '', ''])
     for r in relations:
         written_key = to_longer_key_if_compressed(r[0])
@@ -94,11 +87,11 @@ def get_method_structure_html(relations, all_lv_sorted_by_min_order):
         linear_k = r[3]
         if last_key == para_k:
             if written_key not in written_key2linear_key:
-                written_key2linear_key[written_key]={}
+                written_key2linear_key[written_key] = {}
             if read_key not in read_key2linear_key:
-                read_key2linear_key[read_key]={}
-            written_key2linear_key[written_key][linear_k]=''
-            read_key2linear_key[read_key][linear_k]=''
+                read_key2linear_key[read_key] = {}
+            written_key2linear_key[written_key][linear_k] = ''
+            read_key2linear_key[read_key][linear_k] = ''
             written_list_within[written_key] = ''
             read_list_within[read_key] = ''
             continue
@@ -109,7 +102,7 @@ def get_method_structure_html(relations, all_lv_sorted_by_min_order):
             if lv in read_list_within:
                 if lv in written_list_within:
                     if lv in written_key2linear_key and lv in read_key2linear_key and \
-                        len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                            len(set.intersection(set(written_key2linear_key[lv]), set(read_key2linear_key[lv]))) > 0:
                         color = self_assign_color
                     else:
                         color = read_and_written_color
@@ -128,20 +121,20 @@ def get_method_structure_html(relations, all_lv_sorted_by_min_order):
         read_list_within.clear()
         written_key2linear_key.clear()
         read_key2linear_key.clear()
-        
+
         written_list_within[written_key] = ''
         read_list_within[read_key] = ''
 
         if written_key not in written_key2linear_key:
-            written_key2linear_key[written_key]={}
+            written_key2linear_key[written_key] = {}
         if read_key not in read_key2linear_key:
-            read_key2linear_key[read_key]={}
-        written_key2linear_key[written_key][linear_k]=''
-        read_key2linear_key[read_key][linear_k]=''
-
+            read_key2linear_key[read_key] = {}
+        written_key2linear_key[written_key][linear_k] = ''
+        read_key2linear_key[read_key][linear_k] = ''
 
     keys.append('</table>')
     return html_str + "".join(keys)
+
 
 def has_condition_key(keys):
     for i in keys:
@@ -149,23 +142,17 @@ def has_condition_key(keys):
             return True
     return False
 
-def bridge(k1,k2):
-    pass
 
-def get_intermedia(graph,k_start,k_end):
-    pass
-
-
-def get_lv_trace_html(relations, all_lv_sorted_by_min_order,order_max_map,mk):
+def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
     html_str = make_h1_html("Local Variable Trace", 'lvt')
     keys = []
     keys.append('<table border="1">')
     keys.append('<tr><td></td>')
     for i in range(len(all_lv_sorted_by_min_order)):
-        back_color='#ffffff'
+        back_color = '#ffffff'
         if not is_lv_key(all_lv_sorted_by_min_order[i]):
-            back_color='#bbbbbb'
-        keys.append('<td bgcolor="'+back_color+'">')
+            back_color = '#bbbbbb'
+        keys.append('<td bgcolor="' + back_color + '">')
         show_index = str(i + 1).rjust(2)
         keys.append(show_index.replace(' ', '&nbsp;'))
         keys.append('</td>')
@@ -176,182 +163,177 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order,order_max_map,mk):
     written_list_within = {}
     read_list_within = {}
 
-    written_key2linear_key={}
-    read_key2linear_key={}
+    written_key2linear_key = {}
+    read_key2linear_key = {}
 
-    #read_and_written_color = '#000000'
-    start_line_color='#ffaaaa'
-    finish_line_color='#aaaaff'
+    # read_and_written_color = '#000000'
+    start_line_color = '#ffaaaa'
+    finish_line_color = '#aaaaff'
     written_color = '#ffaaaa'
     read_color = '#aaaaff'
-    self_assign_color='#99ff99'
-    out_of_range_color='#99999'
+    self_assign_color = '#99ff99'
+    out_of_range_color = '#99999'
     read_by_condition_color = '#ffff66'
     not_read_nor_written_color1 = '#ffffff'
     not_read_nor_written_color2 = '#eeeeee'
     not_read_nor_written_color = not_read_nor_written_color1
     relations.append(['', '', '', ''])
-    lv2read={}
-    lv2written={}
-    return_local=''
+    lv2read = {}
+    lv2written = {}
     for r in relations:
         written_key = to_longer_key_if_compressed(r[0])
         read_key = to_longer_key_if_compressed(r[1])
         para_k = r[2]
         linear_k = r[3]
         if last_linear_key == linear_k:
-            if is_field_key(written_key):
-                return_local=read_key
-            if written_key.endswith(':Local') and read_key.endswith(':Return'):
-                return_local=read_key
             if written_key in all_lv_sorted_by_min_order:
-                lv2read[written_key]=read_key
+                lv2read[written_key] = read_key
             if read_key in all_lv_sorted_by_min_order:
-                lv2written[read_key]=written_key        
+                lv2written[read_key] = written_key
             if written_key not in written_key2linear_key:
-                written_key2linear_key[written_key]={}
+                written_key2linear_key[written_key] = {}
             if read_key not in read_key2linear_key:
-                read_key2linear_key[read_key]={}
-            written_key2linear_key[written_key][linear_k]=''
-            read_key2linear_key[read_key][linear_k]=''
+                read_key2linear_key[read_key] = {}
+            written_key2linear_key[written_key][linear_k] = ''
+            read_key2linear_key[read_key][linear_k] = ''
             written_list_within[written_key] = ''
             read_list_within[read_key] = ''
             continue
-        k = str(last_linear_key).rjust(4) + ' : ' + '(' + last_key + ')'
+        k = str(last_linear_key).rjust(4).replace(' ', '&nbsp;') + ' : ' \
+            + '(' + convert_pk_to_colored_text(last_key) + ')'
         keys.append('<tr><td bgcolor="' + not_read_nor_written_color + '">')
-        keys.append(k.replace(' ', '&nbsp;'))
-        color_count_read=0
-        color_count_written=0
-        current_row=[]
+        keys.append(k)
+        color_count_read = 0
+        color_count_written = 0
+        current_row = []
         count = 0
         for lv in all_lv_sorted_by_min_order:
-            max_order=order_max_map[lv] if lv in order_max_map else 1000000
-            count+=1
-            table_show_text=str(count)
-            relaion_key=''
+            max_order = order_max_map[lv] if lv in order_max_map else 1000000
+            count += 1
+            table_show_text = str(count)
+            relation_key = ''
             if lv in read_list_within:
                 if lv in written_list_within:
                     if lv in written_key2linear_key and lv in read_key2linear_key and \
-                        len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                            len(set.intersection(set(written_key2linear_key[lv]), set(read_key2linear_key[lv]))) > 0:
                         color = self_assign_color
-                        relaion_key=lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
-                        color_count_read+=1
-                        color_count_written+=1
-                    else:
-                        color = read_and_written_color
+                        relation_key = lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
+                        color_count_read += 1
+                        color_count_written += 1
                 else:
                     if has_condition_key(written_list_within):
                         color = read_by_condition_color
-                        color_count_read+=1
-                        color_count_written+=1
-                        relaion_key=lv2written[lv] if lv in lv2written else ''
+                        color_count_read += 1
+                        color_count_written += 1
+                        relation_key = lv2written[lv] if lv in lv2written else ''
                     else:
-                        relaion_key=(lv2written[lv] if lv in lv2written else '') +'<br>&nbsp;&nbsp;'+ return_local
+                        relation_key = lv2written[lv] if lv in lv2written else ''
                         color = read_color
-                        color_count_read+=1
+                        color_count_read += 1
             else:
                 if lv in written_list_within:
-                    relaion_key=(lv2read[lv] if lv in lv2read else '') +'<br>&nbsp;&nbsp;'+ return_local
+                    relation_key = lv2read[lv] if lv in lv2read else ''
                     color = written_color
-                    color_count_written+=1
+                    color_count_written += 1
                 else:
-                    if int(last_linear_key) < max_order or int(last_linear_key) > max_order +5:
+                    if int(last_linear_key) < max_order or int(last_linear_key) > max_order + 5:
                         color = not_read_nor_written_color
                     else:
                         color = out_of_range_color
-                    table_show_text=''
-            pop_text='&nbsp;&nbsp;'+lv.replace(mk,'')+'<br>&nbsp;&nbsp;'+relaion_key.replace(mk,'')
-            if table_show_text=='':
-                current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">'+table_show_text)
+                    table_show_text = ''
+            pop_text = '&nbsp;&nbsp;' + lv.replace(mk, '') + '<br>&nbsp;&nbsp;' + relation_key.replace(mk, '')
+            if table_show_text == '':
+                current_row.append(
+                    '</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">' + table_show_text)
             else:
-                current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="'\
-                + pop_text + '"bgcolor="' + color + '">'+table_show_text)
-        if color_count_written == 0 and color_count_read > 0 :
+                current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="' \
+                                   + pop_text + '"bgcolor="' + color + '">' + table_show_text)
+        if color_count_written == 0 and color_count_read > 0:
             current_row.clear()
             count = 0
             for lv in all_lv_sorted_by_min_order:
-                max_order=order_max_map[lv] if lv in order_max_map else 1000000
-                count+=1
-                table_show_text=str(count)
-                relaion_key=''
+                max_order = order_max_map[lv] if lv in order_max_map else 1000000
+                count += 1
+                table_show_text = str(count)
+                relation_key = ''
                 if lv in read_list_within:
                     if lv in written_list_within:
                         if lv in written_key2linear_key and lv in read_key2linear_key and \
-                            len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                                len(set.intersection(set(written_key2linear_key[lv]),
+                                                     set(read_key2linear_key[lv]))) > 0:
                             color = self_assign_color
-                            relaion_key=lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
-                        else:
-                            color = read_and_written_color
+                            relation_key = lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
                     else:
                         if has_condition_key(written_list_within):
                             color = read_by_condition_color
-                            relaion_key=lv2written[lv] if lv in lv2written else ''
+                            relation_key = lv2written[lv] if lv in lv2written else ''
                         else:
-                            relaion_key=(lv2written[lv] if lv in lv2written else '') +'<br>&nbsp;&nbsp;'+ return_local
+                            relation_key = lv2written[lv] if lv in lv2written else ''
                             color = read_color
                 else:
                     if lv in written_list_within:
-                        relaion_key=(lv2read[lv] if lv in lv2read else '') +'<br>&nbsp;&nbsp;'+ return_local
+                        relation_key = lv2read[lv] if lv in lv2read else ''
                         color = written_color
                     else:
-                        if int(last_linear_key) < max_order or int(last_linear_key) > max_order +5:
+                        if int(last_linear_key) < max_order or int(last_linear_key) > max_order + 5:
                             color = start_line_color
                         else:
                             color = out_of_range_color
-                        table_show_text=''
-                pop_text='&nbsp;&nbsp;'+lv.replace(mk,'')+'<br>'+'&nbsp;&nbsp;'+relaion_key.replace(mk,'')
-                if table_show_text=='':
-                    current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">'+table_show_text)
+                        table_show_text = ''
+                pop_text = '&nbsp;&nbsp;' + lv.replace(mk, '') + '<br>' + '&nbsp;&nbsp;' + relation_key.replace(mk, '')
+                if table_show_text == '':
+                    current_row.append(
+                        '</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">' + table_show_text)
                 else:
-                    current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="'\
-                    + pop_text + '"bgcolor="' + color + '">'+table_show_text)
-                
-        if color_count_written > 0 and color_count_read == 0 :
+                    current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="' \
+                                       + pop_text + '"bgcolor="' + color + '">' + table_show_text)
+
+        if color_count_written > 0 and color_count_read == 0:
             current_row.clear()
             count = 0
             for lv in all_lv_sorted_by_min_order:
-                max_order=order_max_map[lv] if lv in order_max_map else 1000000
-                count+=1
-                table_show_text=str(count)
-                relaion_key=''
+                max_order = order_max_map[lv] if lv in order_max_map else 1000000
+                count += 1
+                table_show_text = str(count)
+                relation_key = ''
                 if lv in read_list_within:
                     if lv in written_list_within:
                         if lv in written_key2linear_key and lv in read_key2linear_key and \
-                            len(set.intersection(set(written_key2linear_key[lv]),set(read_key2linear_key[lv])))>0:
+                                len(set.intersection(set(written_key2linear_key[lv]),
+                                                     set(read_key2linear_key[lv]))) > 0:
                             color = self_assign_color
-                            relaion_key=lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
-                        else:
-                            color = read_and_written_color
+                            relation_key = lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
                     else:
                         if has_condition_key(written_list_within):
                             color = read_by_condition_color
-                            relaion_key=lv2written[lv] if lv in lv2written else ''
+                            relation_key = lv2written[lv] if lv in lv2written else ''
                         else:
-                            relaion_key=(lv2written[lv] if lv in lv2written else '') +'<br>&nbsp;&nbsp;'+ return_local
+                            relation_key = lv2written[lv] if lv in lv2written else ''
                             color = read_color
                 else:
                     if lv in written_list_within:
-                        relaion_key=(lv2read[lv] if lv in lv2read else '') +'<br>&nbsp;&nbsp;'+ return_local
+                        relation_key = lv2read[lv] if lv in lv2read else ''
                         color = written_color
                     else:
-                        if int(last_linear_key) < max_order or int(last_linear_key) > max_order +5:
+                        if int(last_linear_key) < max_order or int(last_linear_key) > max_order + 5:
                             color = finish_line_color
                         else:
                             color = out_of_range_color
-                        table_show_text=''
-                pop_text='&nbsp;&nbsp;'+lv.replace(mk,'')+'<br>'+'&nbsp;&nbsp;'+relaion_key.replace(mk,'')
-                if table_show_text=='':
-                    current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">'+table_show_text)
+                        table_show_text = ''
+                pop_text = '&nbsp;&nbsp;' + lv.replace(mk, '') + '<br>' + '&nbsp;&nbsp;' + relation_key.replace(mk, '')
+                if table_show_text == '':
+                    current_row.append(
+                        '</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">' + table_show_text)
                 else:
-                    current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="'\
-                    + pop_text + '"bgcolor="' + color + '">'+table_show_text)
+                    current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="' \
+                                       + pop_text + '"bgcolor="' + color + '">' + table_show_text)
 
         keys.extend(current_row)
         if not last_key == para_k:
-            if not_read_nor_written_color==not_read_nor_written_color1:
-                not_read_nor_written_color=not_read_nor_written_color2
+            if not_read_nor_written_color == not_read_nor_written_color1:
+                not_read_nor_written_color = not_read_nor_written_color2
             else:
-                not_read_nor_written_color=not_read_nor_written_color1            
+                not_read_nor_written_color = not_read_nor_written_color1
 
         keys.append('</td></tr>')
         last_key = para_k
@@ -360,42 +342,40 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order,order_max_map,mk):
         read_list_within.clear()
         written_key2linear_key.clear()
         read_key2linear_key.clear()
-        return_local=''
         lv2read.clear()
         lv2written.clear()
-        if is_field_key(written_key):
-            return_local=read_key
-        if written_key.endswith(':Local') and read_key.endswith(':Return'):
-            return_local=read_key
         if written_key in all_lv_sorted_by_min_order:
-            lv2read[written_key]=read_key
+            lv2read[written_key] = read_key
         if read_key in all_lv_sorted_by_min_order:
-            lv2written[read_key]=written_key
-        
+            lv2written[read_key] = written_key
+
         written_list_within[written_key] = ''
         read_list_within[read_key] = ''
 
         if written_key not in written_key2linear_key:
-            written_key2linear_key[written_key]={}
+            written_key2linear_key[written_key] = {}
         if read_key not in read_key2linear_key:
-            read_key2linear_key[read_key]={}
-        written_key2linear_key[written_key][linear_k]=''
-        read_key2linear_key[read_key][linear_k]=''
+            read_key2linear_key[read_key] = {}
+        written_key2linear_key[written_key][linear_k] = ''
+        read_key2linear_key[read_key][linear_k] = ''
     keys.append('</table>')
     return html_str + "".join(keys)
 
 
 def get_parameter_count_by_mk(method_key):
     parameter_str = method_key.split(":")[2]
-    return len(parameter_str.split(","))
-    
-def get_parameter_and_return_keys(method_key,parameter_count):
-    return_list=[]
+    params = parameter_str.split(",")
+    return 0 if params[0] == '' else len(parameter_str.split(","))
+
+
+def get_parameter_and_return_keys(method_key, parameter_count):
+    return_list = []
     for i in range(parameter_count):
         parameter_i = method_key + "Parameter" + str(i + 1)
         return_list.append(parameter_i)
-    return_list.append( method_key + "Return")
+    return_list.append(method_key + "Return")
     return return_list
+
 
 def get_parameter_and_return_html(method_key):
     html_str = ""
@@ -413,7 +393,7 @@ def get_parameter_and_return_html(method_key):
     return html_str
 
 
-def get_all_local_variable_html(relation_list,mk):
+def get_all_local_variable_html(relation_list, mk):
     html_str = make_h1_html("all local variables:")
     local_variables = []
     order_min_map = {}
@@ -475,7 +455,7 @@ def get_all_local_variable_html(relation_list,mk):
         sorted_by_min_order = [[k, v] for k, v in order_min_map.items()]
         sorted_by_min_order.sort(key=lambda e: e[1])
     count = 0
-    sorted_by_min_order=[i[0] for i in sorted_by_min_order]
+    sorted_by_min_order = [i[0] for i in sorted_by_min_order]
     for lv in sorted_by_min_order:
         count += 1
         order_span = order_max_map[lv] - order_min_map[lv] + 1
@@ -483,7 +463,7 @@ def get_all_local_variable_html(relation_list,mk):
         space3 = "&nbsp;&nbsp;"
         index_text = str(count).rjust(3) + '  '
         index_text = index_text.replace(' ', '&nbsp;')
-        html_str += index_text + make_link_html(lv.replace(mk,''), lv) \
+        html_str += index_text + make_link_html(lv.replace(mk, ''), lv) \
                     + space3 + str(order_min_map[lv]) \
                     + space3 + '-' \
                     + space3 + str(order_max_map[lv]) \
@@ -492,11 +472,7 @@ def get_all_local_variable_html(relation_list,mk):
                     + space3 + ':' \
                     + space3 + str(len(order_count_map[lv]))
         html_str += "<br><br>"
-    return html_str, node2node, local_variables, sorted_by_min_order,order_max_map
-
-
-def make_colored_text_html(text, color):
-    return '<text style="background-color:' + color + '">' + text + '</text>'
+    return html_str, node2node, local_variables, sorted_by_min_order, order_max_map
 
 
 def sort_dependency_by_method_size(dependency_list, method_size_map):
@@ -1073,31 +1049,31 @@ if __name__ == "__main__":
     LV2relations = pickle.load(open(LV2relations_file_path, 'rb'))
     ###method
 
-    read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
-    written_relation = pickle.load(open(written_relation_compressed_path, "rb"))    
-    fieldFeatureKey2fieldFeatureRelationList = \
-        pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))    
-    interfaceType = pickle.load(open(interfaceType_path, 'rb'))
-    superTypes = pickle.load(open(superTypes_path, 'rb'))
-    subTypes = pickle.load(open(subTypes_path, 'rb'))
-    fieldKey2typeKey = pickle.load(open(fieldKey2typeKey_path, 'rb'))
-    type2instance_for_field = pickle.load(open(type2instance_for_field_file_path, 'rb'))
-    type2instance_for_local = pickle.load(open(type2instance_for_local_file_path, 'rb'))
-    fieldKey2fieldFeatureCount = pickle.load(open(fieldKey2fieldFeatureCount_path, 'rb'))    
-    class2field_dependency_in_dir = pickle.load(open(class2field_dependency_in_dir_file_path, 'rb'))
-    class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))    
-    class2self_responsibility_in = pickle.load(open(class2self_responsibility_in_path, 'rb'))
-    class2self_responsibility_out = pickle.load(open(class2self_responsibility_out_path, 'rb'))    
-    class2self_dependency_in_sum = pickle.load(open(class2self_dependency_in_sum_path, 'rb'))
-    class2self_dependency_out_sum = pickle.load(open(class2self_dependency_out_sum_path, 'rb'))
-    class2global_dependency_in_sum = pickle.load(open(class2global_dependency_in_sum_path, 'rb'))
-    class2global_dependency_out_sum = pickle.load(open(class2global_dependency_out_sum_path, 'rb'))    
-    field_consumption_dependency_in_dir = pickle.load(open(global_field_consumption_dependency_in_dir_path, 'rb'))
-    field_consumption_dependency_out_dir = pickle.load(open(global_field_consumption_dependency_out_dir_path, 'rb'))
-    type_dependency_in = pickle.load(open(type_dependency_in_path, 'rb'))
-    type_dependency_out = pickle.load(open(type_dependency_out_path, 'rb'))
-    type_size_in = pickle.load(open(type_size_in_path, 'rb'))
-    type_size_out = pickle.load(open(type_size_out_path, 'rb'))
+    # read_relation = pickle.load(open(read_relation_compressed_path, "rb"))
+    # written_relation = pickle.load(open(written_relation_compressed_path, "rb"))
+    # fieldFeatureKey2fieldFeatureRelationList = \
+    #     pickle.load(open(fieldFeatureKey2fieldFeatureRelationList_compressed_path, 'rb'))
+    # interfaceType = pickle.load(open(interfaceType_path, 'rb'))
+    # superTypes = pickle.load(open(superTypes_path, 'rb'))
+    # subTypes = pickle.load(open(subTypes_path, 'rb'))
+    # fieldKey2typeKey = pickle.load(open(fieldKey2typeKey_path, 'rb'))
+    # type2instance_for_field = pickle.load(open(type2instance_for_field_file_path, 'rb'))
+    # type2instance_for_local = pickle.load(open(type2instance_for_local_file_path, 'rb'))
+    # fieldKey2fieldFeatureCount = pickle.load(open(fieldKey2fieldFeatureCount_path, 'rb'))
+    # class2field_dependency_in_dir = pickle.load(open(class2field_dependency_in_dir_file_path, 'rb'))
+    # class2field_dependency_out_dir = pickle.load(open(class2field_dependency_out_dir_file_path, 'rb'))
+    # class2self_responsibility_in = pickle.load(open(class2self_responsibility_in_path, 'rb'))
+    # class2self_responsibility_out = pickle.load(open(class2self_responsibility_out_path, 'rb'))
+    # class2self_dependency_in_sum = pickle.load(open(class2self_dependency_in_sum_path, 'rb'))
+    # class2self_dependency_out_sum = pickle.load(open(class2self_dependency_out_sum_path, 'rb'))
+    # class2global_dependency_in_sum = pickle.load(open(class2global_dependency_in_sum_path, 'rb'))
+    # class2global_dependency_out_sum = pickle.load(open(class2global_dependency_out_sum_path, 'rb'))
+    # field_consumption_dependency_in_dir = pickle.load(open(global_field_consumption_dependency_in_dir_path, 'rb'))
+    # field_consumption_dependency_out_dir = pickle.load(open(global_field_consumption_dependency_out_dir_path, 'rb'))
+    # type_dependency_in = pickle.load(open(type_dependency_in_path, 'rb'))
+    # type_dependency_out = pickle.load(open(type_dependency_out_path, 'rb'))
+    # type_size_in = pickle.load(open(type_size_in_path, 'rb'))
+    # type_size_out = pickle.load(open(type_size_out_path, 'rb'))
 
     HOST, PORT = '', 8888
     listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1313,15 +1289,16 @@ if __name__ == "__main__":
 
                 all_lv_sorted_by_min_order = []
                 if shorter_key in method2relations:
-                    all_local_html, local_node2node, all_lv_key, all_lv_sorted_by_min_order,order_max_map = \
-                        get_all_local_variable_html(method2relations[shorter_key],request_str)
+                    all_local_html, local_node2node, all_lv_key, all_lv_sorted_by_min_order, order_max_map = \
+                        get_all_local_variable_html(method2relations[shorter_key], request_str)
                     http_response += all_local_html
 
                 if shorter_key in method2relations:
-                    all_lv_sorted_by_min_order.extend(get_parameter_and_return_keys(request_str,\
-                        get_parameter_count_by_mk(request_str)))
+                    all_lv_sorted_by_min_order.extend(get_parameter_and_return_keys(request_str, \
+                                                                                    get_parameter_count_by_mk(
+                                                                                        request_str)))
                     http_response += get_lv_trace_html(
-                        method2relations[shorter_key], all_lv_sorted_by_min_order,order_max_map,request_str)
+                        method2relations[shorter_key], all_lv_sorted_by_min_order, order_max_map, request_str)
 
                 if shorter_key in method2relations:
                     all_lv_key.sort()
@@ -1336,13 +1313,13 @@ if __name__ == "__main__":
                         method2dependency_in_inside_method[shorter_key],
                         method2dependency_out_inside_method[shorter_key], request_str)
                 print('get_dependency_html_inside_method end')
-                #if shorter_key in method2global_relations:
+                # if shorter_key in method2global_relations:
                 #    if shorter_key not in method2relations:
                 #        local_node2node = {}
                 #    relation_list = method2global_relations[shorter_key]
                 #    relation_list.sort(key=lambda e: e[2])
                 #    http_response += get_relation_without_local_html(relation_list, local_node2node)
-                #if shorter_key in method2relations:
+                # if shorter_key in method2relations:
                 #    http_response += get_relation_with_local_html(method2relations[shorter_key])
             # 局部变量的历程
             elif request_str in LVKey2LVTypeKey:
@@ -1571,7 +1548,7 @@ if __name__ == "__main__":
             exc_type, exc_value, exc_traceback = sys.exc_info()
             error = '<br>'.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
             http_response += error
-        http_response +='''
+        http_response += '''
             <style type="text/css">
                 .pop{
                   width:800px;
@@ -1595,7 +1572,7 @@ if __name__ == "__main__":
                 }　
             </style>
         '''
-        http_response +='''
+        http_response += '''
             <div class='pop' id='pop' >
             <div id='triangle' class='triangle-bottom'></div>
             </div>

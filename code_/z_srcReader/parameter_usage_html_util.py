@@ -1,6 +1,7 @@
 from code_.util.dict_util import merge_dict_with_value_merged
 from code_.z_srcReader.method_usage_html_util import get_zero_degree, all_id_list_for_js_variable, \
-    dependency_colors, make_colored_text_html
+    make_colored_text_html
+from code_.util.html_util import dependency_colors
 
 done_key = {}
 
