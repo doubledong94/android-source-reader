@@ -5,6 +5,10 @@ from code_.util.file_util import fieldkey2fieldTypekey_path, LVKey2LVTypeKey_pat
 fieldkey2fieldTypekey = pickle.load(open(fieldkey2fieldTypekey_path, 'rb'))
 LVKey2LVTypeKey = pickle.load(open(LVKey2LVTypeKey_path, 'rb'))
 
+def split_mk_into_class_key_and_method_name(mk):
+    pos=mk.rfind('::')
+    pos=mk.rfind('.',0,pos-1)
+    return mk[:pos],mk[pos+1:]
 
 def is_lv_key_or_index(key):
     return key in LVKey2LVTypeKey or is_index_key(key)

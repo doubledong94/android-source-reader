@@ -32,15 +32,34 @@ from code_.util.key_conversion_util import decompress_by_replace, to_shorter_key
 from code_.util.key_util import get_method_feature_key, is_parameter_key, is_return_key, \
     get_method_key_from_parameter_key, is_method_feature_key, get_method_feature_index, get_method_key_from_feature, \
     get_field_feature_key, get_field_key_from_feature, is_condition_key, is_reference_key, is_lv_key, is_field_key, \
-    is_field_reference_key, get_key_from_dependency_inside_method_key
+    is_field_reference_key, get_key_from_dependency_inside_method_key, split_mk_into_class_key_and_method_name
 from code_.z_srcReader import method_usage_html_util
 from code_.z_srcReader.big_method_separation_util import separation
+from code_.z_srcReader.class_tree_html_util import get_class_tree_html
 from code_.z_srcReader.method_usage_html_util import get_size_string, get_dependency_in_and_out_html, \
     get_zero_degree, recur_for_dependency_inside_method, recur_for_dependency_inside_method_cost
 from code_.z_srcReader.field_usage_html_util import get_field_usage_html
 from code_.z_srcReader.parameter_usage_html_util import get_parameter_consumption_html_in_and_out
 
 method_key2method_features = {}
+
+
+def get_sub_class_method_html(mk):
+    class_key, method_name = split_mk_into_class_key_and_method_name(mk)
+    if class_key not in subTypes:
+        return ''
+    sub_classes = subTypes[class_key]
+    if len(sub_classes)==0:
+        return ''
+    html_str = make_h1_html('sub class methods', 'scm')
+    has=False
+    for sub_class in sub_classes:
+        sub_class_method_key = sub_class + '.' + method_name
+        if sub_class_method_key in methodKey2typeKey:
+            has=True
+            html_str += make_link_html(sub_class_method_key, sub_class_method_key)
+            html_str += '<br>'
+    return html_str if has else ''
 
 
 def get_method_features(method_key):
@@ -151,15 +170,42 @@ def has_condition_key(keys):
     return False
 
 
+def update_max(max_, challenger):
+    return max_ if max_ > challenger else challenger
+
+
+def update_min(min_, challenger):
+    return min_ if min_ < challenger else challenger
+
+
+def get_arrow_text(current_index, written_index, min_read, max_read):
+    real_min = min(written_index, min_read, max_read)
+    real_max = max(written_index, min_read, max_read)
+    if written_index == -1 or min_read == -1 or max_read == -1:
+        return ""
+    if real_max > current_index > real_min:
+        if written_index < min_read:
+            return '<font style="font-weight:bold;"><</font>'
+        if written_index > max_read:
+            return '<font style="font-weight:bold;">></font>'
+        if current_index < written_index:
+            return '<font style="font-weight:bold;">></font>'
+        if current_index > written_index:
+            return '<font style="font-weight:bold;"><</font>'
+    else:
+        return ""
+
+
 def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
     html_str = make_h1_html("Local Variable Trace", 'lvt')
     keys = []
     keys.append('<table border="1">')
     keys.append('<tr><td></td>')
+    parameter_and_return_back_color = '#bbbbbb'
     for i in range(len(all_lv_sorted_by_min_order)):
         back_color = '#ffffff'
         if not is_lv_key(all_lv_sorted_by_min_order[i]):
-            back_color = '#bbbbbb'
+            back_color = parameter_and_return_back_color
         keys.append('<td bgcolor="' + back_color + '">')
         show_index = str(i + 1).rjust(2)
         keys.append(show_index.replace(' ', '&nbsp;'))
@@ -170,6 +216,7 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
     last_linear_key = relations[0][3]
     written_list_within = {}
     read_list_within = {}
+    read2written_list = {}
 
     written_key2linear_key = {}
     read_key2linear_key = {}
@@ -205,6 +252,9 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
             written_key2linear_key[written_key][linear_k] = ''
             read_key2linear_key[read_key][linear_k] = ''
             written_list_within[written_key] = ''
+            if read_key not in read2written_list:
+                read2written_list[read_key] = {}
+            read2written_list[read_key][written_key] = ''
             read_list_within[read_key] = ''
             continue
         k = str(last_linear_key).rjust(4).replace(' ', '&nbsp;') + ' : ' \
@@ -214,6 +264,17 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
         color_count_read = 0
         color_count_written = 0
         current_row = []
+        written_index = -1
+        max_read_index = -1
+        min_read_index = 100000
+        array_index = 0
+        for lv in all_lv_sorted_by_min_order:
+            array_index += 1
+            if lv in written_list_within:
+                written_index = array_index
+            if lv in read_list_within:
+                max_read_index = update_max(max_read_index, array_index)
+                min_read_index = update_min(min_read_index, array_index)
         count = 0
         for lv in all_lv_sorted_by_min_order:
             max_order = order_max_map[lv] if lv in order_max_map else 1000000
@@ -229,7 +290,7 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
                         color_count_read += 1
                         color_count_written += 1
                 else:
-                    if has_condition_key(written_list_within):
+                    if lv in read2written_list and has_condition_key(read2written_list[lv]):
                         color = read_by_condition_color
                         color_count_read += 1
                         color_count_written += 1
@@ -251,12 +312,18 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
                     table_show_text = ''
             pop_text = '&nbsp;&nbsp;' + lv.replace(mk, '') + '<br>&nbsp;&nbsp;' + relation_key.replace(mk, '')
             if table_show_text == '':
-                current_row.append(
-                    '</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">' + table_show_text)
+                if not is_lv_key(all_lv_sorted_by_min_order[count - 1]):
+                    color = parameter_and_return_back_color
+                table_show_text = get_arrow_text(count, written_index, min_read_index, max_read_index)
+                current_row.append('</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="'
+                                   + color + '">' + table_show_text)
             else:
+                bold_text = ''
+                if lv.replace(mk, '').startswith('0,0,0-'):
+                    bold_text = ' style="font-weight:bold;" '
                 current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="' \
-                                   + pop_text + '"bgcolor="' + color + '">' + table_show_text)
-        if color_count_written == 0 and color_count_read > 0:
+                                   + pop_text + '" ' + bold_text + ' bgcolor="' + color + '">' + table_show_text)
+        if color_count_written == 0:
             current_row.clear()
             count = 0
             for lv in all_lv_sorted_by_min_order:
@@ -272,7 +339,7 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
                             color = self_assign_color
                             relation_key = lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
                     else:
-                        if has_condition_key(written_list_within):
+                        if lv in read2written_list and has_condition_key(read2written_list[lv]):
                             color = read_by_condition_color
                             relation_key = lv2written[lv] if lv in lv2written else ''
                         else:
@@ -290,11 +357,16 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
                         table_show_text = ''
                 pop_text = '&nbsp;&nbsp;' + lv.replace(mk, '') + '<br>' + '&nbsp;&nbsp;' + relation_key.replace(mk, '')
                 if table_show_text == '':
+                    if not is_lv_key(all_lv_sorted_by_min_order[count - 1]):
+                        color = parameter_and_return_back_color
                     current_row.append(
                         '</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">' + table_show_text)
                 else:
+                    bold_text = ''
+                    if lv.replace(mk, '').startswith('0,0,0-'):
+                        bold_text = ' style="font-weight:bold;" '
                     current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="' \
-                                       + pop_text + '"bgcolor="' + color + '">' + table_show_text)
+                                       + pop_text + '" ' + bold_text + ' bgcolor="' + color + '">' + table_show_text)
 
         if color_count_written > 0 and color_count_read == 0:
             current_row.clear()
@@ -312,7 +384,7 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
                             color = self_assign_color
                             relation_key = lv2read[lv] if lv in lv2read else lv2written[lv] if lv in lv2written else ''
                     else:
-                        if has_condition_key(written_list_within):
+                        if lv in read2written_list and has_condition_key(read2written_list[lv]):
                             color = read_by_condition_color
                             relation_key = lv2written[lv] if lv in lv2written else ''
                         else:
@@ -330,11 +402,16 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
                         table_show_text = ''
                 pop_text = '&nbsp;&nbsp;' + lv.replace(mk, '') + '<br>' + '&nbsp;&nbsp;' + relation_key.replace(mk, '')
                 if table_show_text == '':
+                    if not is_lv_key(all_lv_sorted_by_min_order[count - 1]):
+                        color = parameter_and_return_back_color
                     current_row.append(
                         '</td><td onmouseover="hiden()" onmouseout="hiden()" bgcolor="' + color + '">' + table_show_text)
                 else:
+                    bold_text = ''
+                    if lv.replace(mk, '').startswith('0,0,0-'):
+                        bold_text = ' style="font-weight:bold;" '
                     current_row.append('</td><td onmouseover="show()" onmouseout="hiden()" data-text="' \
-                                       + pop_text + '"bgcolor="' + color + '">' + table_show_text)
+                                       + pop_text + '" ' + bold_text + ' bgcolor="' + color + '">' + table_show_text)
 
         keys.extend(current_row)
         if not last_key == para_k:
@@ -347,6 +424,7 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
         last_key = para_k
         last_linear_key = linear_k
         written_list_within.clear()
+        read2written_list.clear()
         read_list_within.clear()
         written_key2linear_key.clear()
         read_key2linear_key.clear()
@@ -358,6 +436,9 @@ def get_lv_trace_html(relations, all_lv_sorted_by_min_order, order_max_map, mk):
             lv2written[read_key] = written_key
 
         written_list_within[written_key] = ''
+        if read_key not in read2written_list:
+            read2written_list[read_key] = {}
+        read2written_list[read_key][written_key] = ''
         read_list_within[read_key] = ''
 
         if written_key not in written_key2linear_key:
@@ -1033,6 +1114,13 @@ def get_dependency_html_inside_method(dependency_in, dependency_out, mk):
     return ''.join(html_str_list)
 
 
+def get_classes_including_super_classes(sub2super, sub):
+    if sub in sub2super:
+        return get_classes_including_super_classes(sub2super, sub2super[sub]).append(sub)
+    else:
+        return [sub]
+
+
 if __name__ == "__main__":
 
     method2relations = pickle.load(open(method2relations_compressed_path, 'rb'))
@@ -1100,7 +1188,12 @@ if __name__ == "__main__":
         http_response += "\r\n"
         try:
             shorter_key = to_shorter_key_if_compressed(request_str)
-            if request_str.startswith('field_usage:'):  # 属性在几个类中的使用
+            if request_str.startswith('class_tree'):
+                searched_class = request_str[11:]
+                http_response += make_h1_html("class tree")
+                http_response += get_class_tree_html(subTypes, searched_class, 'ct')
+                pass
+            elif request_str.startswith('field_usage:'):  # 属性在几个类中的使用
                 # field_usage:package&package:class&package:class,class,class@fieldKey,fieldKey
                 package_and_searching_method_and_field = request_str[12:].split('@')
                 package_and_classes_list = package_and_searching_method_and_field[0].split('&')
@@ -1289,6 +1382,7 @@ if __name__ == "__main__":
                 http_response += 'src: <a href="http://' + host + ':8888/' + src_ + '">' + src_ + "</a><br>"
                 http_response += "<br>"
                 http_response += get_parameter_and_return_html(request_str)
+                http_response += get_sub_class_method_html(request_str)
 
                 # method features
                 if shorter_key in method2global_relations:
@@ -1327,8 +1421,8 @@ if __name__ == "__main__":
                 #    relation_list = method2global_relations[shorter_key]
                 #    relation_list.sort(key=lambda e: e[2])
                 #    http_response += get_relation_without_local_html(relation_list, local_node2node)
-                # if shorter_key in method2relations:
-                #    http_response += get_relation_with_local_html(method2relations[shorter_key])
+                if shorter_key in method2relations:
+                    http_response += get_relation_with_local_html(method2relations[shorter_key])
             # 局部变量的历程
             elif request_str in LVKey2LVTypeKey:
                 http_response += make_h1_html(request_str)
